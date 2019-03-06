@@ -1,0 +1,157 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Steps to start using the Beetroot: &#8212; The Beetroot Project 0.9.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="#" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="List of most important and complex Beetroot functionalities" href="features.html" />
+    <link rel="prev" title="Welcome to The Beetroot Project’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <p>Beetroot project is a set of CMake macros that set a new, user friendly paradigm of writing CMake code. It targets medium to large CMake deployments and helps by faciliating modularization and parametrization of the project description.</p>
+<p>The idea was started in 2017, and was initially motivated by a) the fact, that usually CMake scripts rely heavily on global variables and b) CMake has very poor function parameter handling. This led to an effort to define a set of macros that facilate checking of types of function arguments. After several iterations and complete redesigning, the current shape Beetroot was formed.</p>
+<p>Beetroot tries to nudge developers to put their targets definitions and dependency declarations inside CMake functions with clear API interface, so it is clear on what information each target depends. In return</p>
+<ol class="arabic simple">
+<li>it does a great deal of semantic checks on the user code,</li>
+<li>allows a lot of flexibility of where and how to put the user CMake code,</li>
+<li>allows to build any part of the project from anywhere,</li>
+<li>can automatically turn a project into a superbuild if any of the targets are external.</li>
+</ol>
+<div class="section" id="steps-to-start-using-the-beetroot">
+<h1>Steps to start using the Beetroot:<a class="headerlink" href="#steps-to-start-using-the-beetroot" title="Permalink to this headline">¶</a></h1>
+<ol class="arabic simple">
+<li>Put the file <code class="docutils literal notranslate"><span class="pre">root.cmake</span></code> in the subfolder <code class="docutils literal notranslate"><span class="pre">cmake</span></code> of the root of your project. The file name and path is not hard-coded and can easily be changed. It is there so the Beetroot can be aware where is the root of your project.</li>
+<li>Put a standard common header in the beginning of the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>, add a call <code class="docutils literal notranslate"><span class="pre">finalizer()</span></code> at the end of it.</li>
+<li>Write target description files (either <code class="docutils literal notranslate"><span class="pre">targets.cmake</span></code> anywhere in the project tree, or any file with the extension <code class="docutils literal notranslate"><span class="pre">.cmake</span></code> in the subdirectory <code class="docutils literal notranslate"><span class="pre">cmake/targets</span></code> anywhere in the project tree.</li>
+<li>Refer to the target you want to build inside the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> by function <code class="docutils literal notranslate"><span class="pre">build_target(&lt;TEMPLATE_NAME&gt;</span> <span class="pre">[&lt;ARGUMENTS&gt;])</span></code></li>
+</ol>
+</div>
+<div class="section" id="how-does-the-beetroot-work">
+<h1>How does the Beetroot work?<a class="headerlink" href="#how-does-the-beetroot-work" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="initialization">
+<h2>Initialization<a class="headerlink" href="#initialization" title="Permalink to this headline">¶</a></h2>
+<p>At the beginning, when Beetroot is loaded, it scans all the subfolders of the project to find target definition files and build a database that maps template/target names to the path of the target definition file.</p>
+<p>It also initializes internal variables (held inside global CMake storage) and loads all internal functions.</p>
+</div>
+<div class="section" id="target-declaration-phase">
+<h2>Target declaration phase<a class="headerlink" href="#target-declaration-phase" title="Permalink to this headline">¶</a></h2>
+<p>When the initialization is complete, it reads through the rest of the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> and expects to find calls to <code class="docutils literal notranslate"><span class="pre">build_target(&lt;TEMPLATE_NAME&gt;</span> <span class="pre">[&lt;ARGUMENTS&gt;])</span></code>. Each call ultimately triggers user defined function <code class="docutils literal notranslate"><span class="pre">declare_dependencies()</span></code>, where the Beetroot expects to find additional <code class="docutils literal notranslate"><span class="pre">build_target()</span></code> calls and marks the target to be defined later on, because no targets will be defined until the call to the <code class="docutils literal notranslate"><span class="pre">finalize()</span></code> at the end of the <code class="docutils literal notranslate"><span class="pre">CMakeList.txt</span></code>. It calls all encountered <code class="docutils literal notranslate"><span class="pre">build_target()</span></code> recursively.</p>
+</div>
+<div class="section" id="target-definition-phase">
+<h2>Target definition phase<a class="headerlink" href="#target-definition-phase" title="Permalink to this headline">¶</a></h2>
+<p>Target definition phase is handled by the call to <code class="docutils literal notranslate"><span class="pre">finalize()</span></code> and this is when targets get defined.</p>
+<p>First of all, Beetroot tries to fully declare all targets that were declared with <code class="docutils literal notranslate"><span class="pre">build_existing_target()</span></code>.</p>
+<p>Once all targets are declared then Beetroot can finally decide whether it is going to do a super build, or project build.</p>
+<p>After that, if it is a project build, it enables all declared languages for all targets in the current build tree.</p>
+<p>Finally it defines and links all the relevant targets, by calling <code class="docutils literal notranslate"><span class="pre">generate_targets()</span></code> user function and then <code class="docutils literal notranslate"><span class="pre">apply_dependency_to_target()</span></code> user function and/or <code class="docutils literal notranslate"><span class="pre">target_link_libraries()</span></code> CMake built in function. When on superbuild it will only attempt to define external targets.</p>
+<p><code class="docutils literal notranslate"><span class="pre">finalize()</span></code> returns and by default this should be the end of the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">The Beetroot Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Steps to start using the Beetroot:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#how-does-the-beetroot-work">How does the Beetroot work?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#initialization">Initialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#target-declaration-phase">Target declaration phase</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#target-definition-phase">Target definition phase</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">List of most important and complex Beetroot functionalities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html#list-of-the-most-visible-features-of-the-beetroot">List of the most visible features of the Beetroot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="start.html">Getting started</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to The Beetroot Project’s documentation!</a></li>
+      <li>Next: <a href="features.html" title="next chapter">List of most important and complex Beetroot functionalities</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Adam Ryczkowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/about.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

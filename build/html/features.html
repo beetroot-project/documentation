@@ -1,0 +1,225 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>List of most important and complex Beetroot functionalities &#8212; The Beetroot Project 0.9.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting started" href="start.html" />
+    <link rel="prev" title="Steps to start using the Beetroot:" href="about.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="list-of-most-important-and-complex-beetroot-functionalities">
+<h1>List of most important and complex Beetroot functionalities<a class="headerlink" href="#list-of-most-important-and-complex-beetroot-functionalities" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="advanced-and-convenient-handling-of-targets-parameters">
+<h2>Advanced and convenient handling of targets’ parameters<a class="headerlink" href="#advanced-and-convenient-handling-of-targets-parameters" title="Permalink to this headline">¶</a></h2>
+<p>Parameters to each target are handled in three ways:</p>
+<ol class="arabic simple">
+<li>Default values are specified in the <code class="docutils literal notranslate"><span class="pre">targets.cmake</span></code>, when declaring the parameters.</li>
+<li>Default values are overriden by existing variables that have the same name.</li>
+<li>Existing variables are overriden by named arguments given to the <code class="docutils literal notranslate"><span class="pre">get_target</span></code> and <code class="docutils literal notranslate"><span class="pre">build_target</span></code> functions.</li>
+</ol>
+<p>Furthermore, system allows for default values to include references to the any variables (including defined parameters themselves) and any other CMake string processing commands. For instance, this is a perfectly valid definition:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">get_filename_component</span><span class="p">(</span><span class="n">TMP</span> <span class="s2">&quot;$</span><span class="si">{ARCH_PREFIX}</span><span class="s2">&quot;</span> <span class="n">NAME</span><span class="p">)</span>
+
+<span class="nb">set</span><span class="p">(</span><span class="n">DEFINE_MODIFIERS</span>
+        <span class="n">ARCH</span>    <span class="n">SCALAR</span>  <span class="n">CHOICE</span><span class="p">(</span><span class="n">GPU</span><span class="p">;</span><span class="n">CPU</span><span class="p">)</span> <span class="n">CPU</span>
+        <span class="n">ARCH_PREFIX</span>     <span class="n">SCALAR</span>  <span class="n">STRING</span> <span class="s2">&quot;$</span><span class="si">{SUPERBUILD_ROOT}</span><span class="s2">/external-$</span><span class="si">{ARCH}</span><span class="s2">&quot;</span>
+        <span class="n">ARCH_RELDIR</span>     <span class="n">SCALAR</span>  <span class="n">STRING</span>  <span class="s2">&quot;$</span><span class="si">{TMP}</span><span class="s2">&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The intention is to let the user specify only the <code class="docutils literal notranslate"><span class="pre">ARCH</span></code> parameter, and the <code class="docutils literal notranslate"><span class="pre">ARCH_PREFIX</span></code> and <code class="docutils literal notranslate"><span class="pre">ARCH_RELDIR</span></code> gets calculated from it.</p>
+</div>
+<div class="section" id="distinction-between-target-parameters-and-link-parameters">
+<h2>Distinction between target parameters and link parameters<a class="headerlink" href="#distinction-between-target-parameters-and-link-parameters" title="Permalink to this headline">¶</a></h2>
+<p>Generally all declared template parameters change the identity of the target. Occasionally though, when the target is used as a dependency, some settings should not change its identity target and trigger a separate build. Those settings include preprocessor macros that are applied for header-only libraries, or are consumed only by the library headers. In this case we can define those parameters as <code class="docutils literal notranslate"><span class="pre">LINK_PARAMETERS</span></code>. User cannot use them inside the <code class="docutils literal notranslate"><span class="pre">generate_target()</span></code> (unless the <code class="docutils literal notranslate"><span class="pre">GENERATE_TARGETS_INCLUDE_LINKPARS</span></code> flag is set, and even then they should not be used in target definitions, but for non-target task, such as defining tests) and <code class="docutils literal notranslate"><span class="pre">declare_dependencies()</span></code> functions, but they are available in <code class="docutils literal notranslate"><span class="pre">apply_to_target()</span></code>.</p>
+</div>
+<div class="section" id="target-definition-can-make-multiple-physical-targets-each-one-with-different-set-of-parameters">
+<h2>Target definition can make multiple physical targets, each one with different set of parameters<a class="headerlink" href="#target-definition-can-make-multiple-physical-targets-each-one-with-different-set-of-parameters" title="Permalink to this headline">¶</a></h2>
+<p>When you require a target <code class="docutils literal notranslate"><span class="pre">FOO</span></code> and specify target parameters, the target with this specific set of parameters will be defined and build. If you require the same target <code class="docutils literal notranslate"><span class="pre">FOO</span></code> with different set of parameters, by default Beetroot will define <em>another</em> instance of the same target, built using the other set of parameters. The targets’ CMake names (and file names) will have a numeral suffix to distinguish them apart. This implies that in general you cannot know the name of the target, until you query for it (or you declared that there can be only one instance of it).</p>
+</div>
+<div class="section" id="special-handling-for-target-parameters-that-describe-features">
+<h2>Special handling for target parameters that describe features<a class="headerlink" href="#special-handling-for-target-parameters-that-describe-features" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes a parameter defines <em>additional feature</em> of the target, that is turned on/advanced independently of the rest of the target functionality. Parameter is a feature, when the dependee who does not require it can still use the target that has it. Features can be flags like <code class="docutils literal notranslate"><span class="pre">&quot;FORTRAN_SUPPORT&quot;</span></code> (if Fortran support does not affect the rest) or a <code class="docutils literal notranslate"><span class="pre">&quot;VERSION&quot;</span></code> (if target development makes sure the code backward compatible ). Support for Features makes re-using the same target in more than one place much better, especially if the target is heavy to build (e.g. big external dependency) and have many different features that can be turned on/off that are consumed by different parts of our project.</p>
+</div>
+<div class="section" id="target-definition-file-can-describe-more-than-one-template-target">
+<h2>Target definition file can describe more than one template/target<a class="headerlink" href="#target-definition-file-can-describe-more-than-one-template-target" title="Permalink to this headline">¶</a></h2>
+<p>There is one-to-many relationship between target definition files and target definition. User can put multiple target/template names in the <code class="docutils literal notranslate"><span class="pre">targets.cmake</span></code>. First parameter of <code class="docutils literal notranslate"><span class="pre">generate_target()</span></code> and <code class="docutils literal notranslate"><span class="pre">declare_dependencies()</span></code> is the name of the target/template, so the user code that handles target definition and dependencies can handle each target/template in different way. The feature was introduced to faciliate defining multiple similar targets in one file. It is used typically in external targets, where e.g. Boost defines multiple targets.</p>
+</div>
+<div class="section" id="support-for-cmake-code-that-do-not-produce-targets">
+<h2>Support for CMake code that do not produce targets<a class="headerlink" href="#support-for-cmake-code-that-do-not-produce-targets" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes we need CMake to do something that does not necessary ends up being a new target, but rather modify existing target. This situation include dedicated code for definition of unit tests (of course unit tests can also be defined inside <code class="docutils literal notranslate"><span class="pre">generate_target()</span></code> that defines the executable), code that applies additional preprocesor definitions or old external targets that not use imported targets CMake mechanism.</p>
+</div>
+<div class="section" id="comprehensive-error-checking">
+<h2>Comprehensive error checking<a class="headerlink" href="#comprehensive-error-checking" title="Permalink to this headline">¶</a></h2>
+<p>We spent a great deal of effort to catch as many usage errors as possible. In particular:</p>
+<ul class="simple">
+<li>We make sure that template modifiers and parameters share the same name space and report all violations.</li>
+<li>System makes sure, that the actual template(s) you want to build actually produce targets.</li>
+<li>System makes sure that dependencies that do not generate targets are not dependent on templates that also do not produce targets.</li>
+<li>System detects lack of both <code class="docutils literal notranslate"><span class="pre">generate_target()</span></code> and <code class="docutils literal notranslate"><span class="pre">apply_to_target()</span></code> for internal projects.</li>
+<li>System detects and forbids variables that start with double underscore, as this can interfere with the Beetroot’s inner working.</li>
+<li>System checks the types and possible values of all arguments against a declaration in <code class="docutils literal notranslate"><span class="pre">targets.cmake</span></code>.</li>
+</ul>
+</div>
+<div class="section" id="external-dependencies-are-external-to-the-beetroot-system">
+<h2>External dependencies are external to the Beetroot system<a class="headerlink" href="#external-dependencies-are-external-to-the-beetroot-system" title="Permalink to this headline">¶</a></h2>
+<p>The system faciliates calling them, manages their external dependencies, build and install location, but ultimately it calls them as if they were a simple external CMake projects, builds them and installs them in the totally normal way.</p>
+</div>
+<div class="section" id="automatic-superbuild-by-default">
+<h2>Automatic superbuild by default<a class="headerlink" href="#automatic-superbuild-by-default" title="Permalink to this headline">¶</a></h2>
+<p>If there is at least one external target defined, all external dependencies are built in the superbuild phase, using the dependencies derrived from the template definitions. Only then the project build is called (implemented as a “external” dependency of all actual external dependencies), so all external dependencies are always already built and installed when you use them. If there are no external dependencies, CMake will build project directly.</p>
+</div>
+</div>
+<div class="section" id="list-of-the-most-visible-features-of-the-beetroot">
+<h1>List of the most visible features of the Beetroot<a class="headerlink" href="#list-of-the-most-visible-features-of-the-beetroot" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="targets-are-defined-inside-the-function-generate-target-in-target-definition-file">
+<h2>Targets are defined inside the function <code class="docutils literal notranslate"><span class="pre">generate_target()</span></code> in target definition file<a class="headerlink" href="#targets-are-defined-inside-the-function-generate-target-in-target-definition-file" title="Permalink to this headline">¶</a></h2>
+<p>In CMake targets (in contrast to variables) are internally represented by the object which lives in a global namespace, even if defined inside the function. Putting target definitions inside a function prevents leaking of temporary variables and pollution of the variable namespace.</p>
+</div>
+<div class="section" id="dependencies-of-targets-are-set-inside-the-function-declare-dependencies-in-target-definition-file">
+<h2>Dependencies of targets are set inside the function <code class="docutils literal notranslate"><span class="pre">declare_dependencies()</span></code> in target definition file<a class="headerlink" href="#dependencies-of-targets-are-set-inside-the-function-declare-dependencies-in-target-definition-file" title="Permalink to this headline">¶</a></h2>
+<p>Target dependencies are handled by function rather than data structure, which allows for maximum flexibility (dependencies can depend in complicated way on the target parameters/features). Because Beetroot structure needs dependencies to be resolved <em>before</em> target definition (and possibly be called multiple times on the same target), the only place to put them is in a dedicated user-supplied function. Code inside this function should be omnipotent, because it can be executed multiple times in a single run. The code will be executed only during the target declaration phase.</p>
+</div>
+<div class="section" id="by-default-the-code-you-write-targets-cmake-does-not-depend-on-your-target-name">
+<h2>By default the code you write (targets.cmake) does not depend on your target name<a class="headerlink" href="#by-default-the-code-you-write-targets-cmake-does-not-depend-on-your-target-name" title="Permalink to this headline">¶</a></h2>
+<p>Unless instructed otherwise, the system dictates the name you give to each target. This way targets’ names are not fixed, and it is possible to have multiple instances of them. This fact is used to let the target definition files (<code class="docutils literal notranslate"><span class="pre">targets.cmake</span></code>) define whole family of targets parametrized by the target parameters and features. The beetroot guarantees, that for each distinct set of target parameter there will be a separate target defined and built.</p>
+</div>
+<div class="section" id="there-is-only-one-type-of-user-supplied-input-file-that-defines-the-targets">
+<h2>There is only one type of user-supplied input file that defines the targets<a class="headerlink" href="#there-is-only-one-type-of-user-supplied-input-file-that-defines-the-targets" title="Permalink to this headline">¶</a></h2>
+<p>All code that define targets and their dependencies can be placed inside so-called target definition files. These files can  be put anywhere in the project and must be named <code class="docutils literal notranslate"><span class="pre">targets.cmake</span></code>, or be placed in the special subfolder <code class="docutils literal notranslate"><span class="pre">cmake/targets</span></code> and have an extension <code class="docutils literal notranslate"><span class="pre">.cmake</span></code>. The latter files usually define external dependencies. The only thing that is influenced by the location of the file, is the value of the <code class="docutils literal notranslate"><span class="pre">${CMAKE_CURRENT_SOURCE_DIR}</span></code> CMake variable available in <code class="docutils literal notranslate"><span class="pre">generate_target()</span></code> user function.</p>
+<p>The user file works by defining any of the following cmake variables: <code class="docutils literal notranslate"><span class="pre">ENUM_TEMPLATES</span></code>, <code class="docutils literal notranslate"><span class="pre">ENUM_TARGETS</span></code>, <code class="docutils literal notranslate"><span class="pre">TARGET_PARAMETERS</span></code>, <code class="docutils literal notranslate"><span class="pre">LINK_PARAMETERS</span></code>, <code class="docutils literal notranslate"><span class="pre">TARGET_FEATURES</span></code> <code class="docutils literal notranslate"><span class="pre">TEMPLATE_OPTIONS</span></code> and <code class="docutils literal notranslate"><span class="pre">DEFINE_EXTERNAL_PROJECT</span></code> and by defining any of the following functions: <code class="docutils literal notranslate"><span class="pre">generate_targets()</span></code>, <code class="docutils literal notranslate"><span class="pre">declare_dependencies()</span></code> and <code class="docutils literal notranslate"><span class="pre">apply_dependency_to_target()</span></code>. Of course, not all combinations of those definitions are legal and any violation of the legality of the definitions is cought and meaningfully reported to the user.</p>
+<p>The other file a user needs to supply is a <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>. This file serves as a point of entry. This file should consist of a standard boilerplate code, calls to the <code class="docutils literal notranslate"><span class="pre">build_target()</span></code> and finally a call to <code class="docutils literal notranslate"><span class="pre">finalize()</span></code>. Standard CMake commands should not be used to define targets. The only purpose of this file is to specify what targets with what parameters must be build by calling a Beetroot function <code class="docutils literal notranslate"><span class="pre">build_target()</span></code> or <code class="docutils literal notranslate"><span class="pre">get_target()</span></code> and letting it do the work.</p>
+</div>
+<div class="section" id="the-role-of-the-cmakelists-txt-is-hugely-downplayed">
+<h2>The role of the CMakeLists.txt is hugely downplayed<a class="headerlink" href="#the-role-of-the-cmakelists-txt-is-hugely-downplayed" title="Permalink to this headline">¶</a></h2>
+<p>There is no need to use <code class="docutils literal notranslate"><span class="pre">add_subdirectory()</span></code>, because Beetroot knows where to look for every managed target. That’s why the only <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> that is needed is the one you manually call with <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">..</span></code>. (Besides <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> inside CMake external dependencies of your project)</p>
+</div>
+<div class="section" id="the-location-of-the-cmakelists-txt-is-no-longer-relevant">
+<h2>The location of the CMakeLists.txt is no longer relevant<a class="headerlink" href="#the-location-of-the-cmakelists-txt-is-no-longer-relevant" title="Permalink to this headline">¶</a></h2>
+<p>As long as the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> is somewhere inside the root project and it adheres to the Beetroots’ mandatory boilerplate code, its location is irrelevant. All components are searched for by name, not by folder, and the system requires them to be written in a way that all paths are absolute (it is achieved by simply prefixing filenames with the <code class="docutils literal notranslate"><span class="pre">${CMAKE_CURRENT_SOURCE_DIR}</span></code>).</p>
+<p>As long Beetroot is responsible for all targets in your code, you can simply copy a <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> from one subfolder of your project to another and they will build just fine there, resulting in exactly the same executable.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">The Beetroot Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="about.html">Steps to start using the Beetroot:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html#how-does-the-beetroot-work">How does the Beetroot work?</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">List of most important and complex Beetroot functionalities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-and-convenient-handling-of-targets-parameters">Advanced and convenient handling of targets’ parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#distinction-between-target-parameters-and-link-parameters">Distinction between target parameters and link parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#target-definition-can-make-multiple-physical-targets-each-one-with-different-set-of-parameters">Target definition can make multiple physical targets, each one with different set of parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#special-handling-for-target-parameters-that-describe-features">Special handling for target parameters that describe features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#target-definition-file-can-describe-more-than-one-template-target">Target definition file can describe more than one template/target</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#support-for-cmake-code-that-do-not-produce-targets">Support for CMake code that do not produce targets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#comprehensive-error-checking">Comprehensive error checking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#external-dependencies-are-external-to-the-beetroot-system">External dependencies are external to the Beetroot system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#automatic-superbuild-by-default">Automatic superbuild by default</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#list-of-the-most-visible-features-of-the-beetroot">List of the most visible features of the Beetroot</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#targets-are-defined-inside-the-function-generate-target-in-target-definition-file">Targets are defined inside the function <code class="docutils literal notranslate"><span class="pre">generate_target()</span></code> in target definition file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dependencies-of-targets-are-set-inside-the-function-declare-dependencies-in-target-definition-file">Dependencies of targets are set inside the function <code class="docutils literal notranslate"><span class="pre">declare_dependencies()</span></code> in target definition file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#by-default-the-code-you-write-targets-cmake-does-not-depend-on-your-target-name">By default the code you write (targets.cmake) does not depend on your target name</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#there-is-only-one-type-of-user-supplied-input-file-that-defines-the-targets">There is only one type of user-supplied input file that defines the targets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-role-of-the-cmakelists-txt-is-hugely-downplayed">The role of the CMakeLists.txt is hugely downplayed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-location-of-the-cmakelists-txt-is-no-longer-relevant">The location of the CMakeLists.txt is no longer relevant</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="start.html">Getting started</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="about.html" title="previous chapter">Steps to start using the Beetroot:</a></li>
+      <li>Next: <a href="start.html" title="next chapter">Getting started</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Adam Ryczkowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/features.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

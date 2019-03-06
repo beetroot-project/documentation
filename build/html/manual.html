@@ -1,0 +1,275 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>) &#8212; The Beetroot Project 0.9.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <p>### What is target?</p>
+<p>TODO</p>
+<p>### Targets file</p>
+<p>This file provides a list of target templates on which actual targets will be built, or actual target names in case we don’t wish them to be instatiated more than once (that is the default CMake behavior).</p>
+<p>The file consists of target generating function (<cite>generate_targets()</cite>) that contain all logic needed to instatiate the required target(s), <cite>declare_dependency()</cite> function that defines what dependencies need to be applied to the targets in addition to <cite>generate_targets()</cite>, and <cite>apply_dependency_to_target()</cite> that describe steps that needs to be taken to apply our targets as dependencies for a given dependee target.</p>
+<p>By default the <cite>apply_dependency_to_target()</cite> is defined as a call to <cite>target_link_libraries(${DEPENDEE_TARGET_NAME} ${KEYWORD} ${TARGET_NAME})</cite> unless dependee is of type UTILITY (i.e. a custom target).</p>
+<p>All those functions are parametrized by the three categories of variables, which share the same namespace.</p>
+<ul class="simple">
+<li><cite>TARGET_PARAMETERS</cite> list all the variables that define the identity of all the defined targets. If user tries to instatiate our template twice with different set of target parameters, he will get either two distinct targets (named with ordinal sufix, e.g. mylib1 and mylib2) or an error if we declare that there can be only one copy of each target.</li>
+<li><cite>LINK_PARAMETERS</cite> list additional variables that can be used by the <cite>apply_dependency_to_target()</cite> function during linking to the depndee (if our target is used as a dependency). Those variables does not change the identity of the target, so if user tries to instatiate targets that differ only in link parameters, there will be only one copy of the target built, but it will be linked in different way to the dependees. One can think of it as if those variables are implicitely included in the dependees’ indetities.</li>
+<li><cite>FEATURES</cite>. Each variable of the list define existence of independent feature. Features are included in the targets’ identities. A target that include more features is always compatible with the target that include less of them. Features can be specified using flags (each flag controls a different feature), scalars (value different than the default mean an extra feature) and vectors (each value of the vector is treated as a separate flag). As long as it is possible, beetroot will only instatiate a single copy of the target for each set of target parameters, that is compatible with all the required features. If the features are not compatible with each other (e.g. scalars), beetroot will issue an error.</li>
+</ul>
+<p>If you find yourself defining a large list of <cite>TARGET_PARAMETERS</cite> over and over again for different targets (for instance to pass targets from a library to a consumer), you can spare yourself a time and call a function <cite>include_target_parameters_of(TEMPLATE_NAME)</cite> in the targets body (i.e. outside of any functions defined therein) to include all the target parameters defined in that file. The file will be processed in the context just after parsing the targets file, including all declared and non-declared variables defined in this file.</p>
+<p>#### include_target_parameters_of()</p>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">``</span></a><a href="#id3"><span class="problematic" id="id4">`</span></a></dt>
+<dd>include_target_parameters_of(&lt;TEMPLATE_NAME&gt; [ALL_EXCEPT &lt;VAR_NAME&gt;… | INCLUDE_ONLY &lt;VAR_NAME&gt;…])</dd>
+</dl>
+<p><a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">`</span></a></p>
+<p>Use this function to import <cite>TARGET_PARAMETERS</cite> from another template file. Only the variable definitions will be imported, just like if you would paste them into the own <cite>TARGET_PARAMETERS</cite>, not other variables and it will not set a build dependency. If the included file itself includes target parameters, they can be included too.</p>
+<p>### apply_dependency_to_target()</p>
+<p>Optional function that is called in Project build everytime, when there is an internal dependee that requires this template. The file is called after both targets are defined. Function gets two positional arguments: first is the dependee target name (the target that needs us), and the second is the name of our target, even if our template does not define targets (in case the file we describe allows only one singleton target, this second argument is always fixed to our target name).</p>
+<p>The function role is to apply extra modifications to the dependee, and finaly to call (or not) <cite>target_link_libraries(${DEPENDEE_TARGET_NAME} ${KEYWORD} ${TARGET_NAME})</cite>, where <cite>DEPENDEE_TARGET_NAME</cite> and <cite>TARGET_NAME</cite> are respectively first and second parameters to the function and <cite>KEYWORD</cite> is defined as either <cite>INTERFACE</cite> or <cite>PRIVATE</cite> depending on whether the <cite>${DEPENDEE_TARGET_NAME}</cite>’s type is <cite>INTERFACE_LIBRARY</cite> or not.</p>
+<p>If our dependency <cite>targets.cmake</cite> does not generate targets, the <cite>${DEPENDEE_TARGET_NAME}</cite> will not be a target either, and only serve as a identifier. On the other hand it is guaranteed that <cite>${TARGET_NAME}</cite> is an actual and existing target, so it might not be an immidiate dependee. If the immidiate dependee is not a target, the function will be called with the first dependee in the dependency chain that defines a target (even if it is only an <cite>INTERFACE</cite>).</p>
+<p>If the function is not defined, and if the <cite>${DEPENDEE_TARGET_NAME}</cite> is not of type <cite>UTILITY</cite> it is defined automatically replaced with a single line <cite>target_link_libraries(${DEPENDEE_TARGET_NAME} ${KEYWORD} ${TARGET_NAME})</cite>. For <cite>UTILITY</cite> no additional code is executed. The automatically generated <cite>target_link_libraries</cite> will be executed after execution of <cite>apply_dependency_to_target()</cite> if <cite>LINK_TO_DEPENDEE</cite> is specified as either external project option or template option.</p>
+<p>### List of implicitely defined variables available for generate_targets() and apply_dependency_to_target()</p>
+<ul class="simple">
+<li>All variables defined in <cite>TARGET_PARAMETERS</cite> and <cite>TARGET_FEATURES</cite></li>
+<li><cite>apply_dependency_to_target()</cite> can also gets variables defined in <cite>LINK_PARAMETERS</cite></li>
+<li><cite>TARGET_NAME</cite> that names the current target</li>
+<li>(external projects only in <cite>apply_dependency_to_target</cite>) <cite>INSTALL_PATH</cite> path where the external dependency is already installed</li>
+<li>(external projects only in <cite>apply_dependency_to_target</cite>) <cite>SOURCE_PATH</cite> source path of the dependency (if available)</li>
+</ul>
+<p>### Template global options</p>
+<p>All options affect the way all targets defined in the <cite>targets.cmake</cite> get intepreted.</p>
+<p>#### SINGLETON_TARGETS</p>
+<p>Option. By setting this option we declare that all targets defined in this file can only be defined in one go, all using the same set of target parameters and features. It also forces only one instance of each target and forces the user to declare the targets using <cite>ENUM_TARGETS</cite> rather than <cite>ENUM_TEMPLATES</cite>.</p>
+<p>If there is only one target defined in this file, the only impact of this option is to force use <cite>ENUM_TARGETS</cite> rather than <cite>ENUM_TEMPLATES</cite>.</p>
+<p>#### NO_TARGETS</p>
+<p>Option. By setting this option we declare that this file does not define any targets at all. Such “no targets” templates still are internally named by their template/target name for resolving the dependencies. The targets will never be built - in fact defining <cite>generate_targets()</cite> function is illegal with this option set, and user must define <cite>apply_dependency_to_target(DEPENDEE_TARGET_NAME OUR_TARGET_NAME)</cite> function instead, that applies whathever there is to apply to already existing dependee, (which will be guaranteed to be the actual target).</p>
+<p>Targets declared with <cite>NO_TARGETS</cite> cannot have their own dependency, because it is unknown how to force CMake to respect dependencies with something that is not a target.</p>
+<p>Such option is usefull for old-style header only libraries (that do not use <cite>INTERFACE</cite> targets) or pieces of CMake code that only produce CMake variables; in such case the relevant code that produces the variables must be placed either in global scope of the <cite>targets.cmake</cite> or inside the <cite>apply_dependency_to_target</cite>. Remember, that only declared variables will be passed to the <cite>apply_dependency_to_target</cite>.</p>
+<p>Note that for <cite>NO_TARGETS</cite> files, there is no difference whether a parameter gets declared inside <cite>TARGET_PARAMETERS</cite>, <cite>LINK_PARAMETERS</cite> or <cite>TARGET_FEATURES</cite> block.</p>
+<p>#### LANGUAGES</p>
+<p>List of languages required by the targets. User cannot set the languages himself, because <cite>enable_language()</cite> function requires to be run in the global context, while none of the user code is run, except for the CMakeLists.txt. CMake 3.13 supports the following languages: <cite>CXX</cite>, <cite>C</cite>, <cite>CUDA</cite>, <cite>Fortran</cite>, and <cite>ASM</cite>. This option can depend on the parameters.</p>
+<p>#### EXPORTED_VARIABLES</p>
+<p>List of variables (<cite>TARGET_PARAMETER</cite>, <cite>LINK_PARAMETER</cite> or <cite>FEATURE</cite>) that can be embedded into the set of variables available when calling <cite>generate_targets()</cite>. These variables and their values will not participate in the definition of the targets’ identities and will get instantiated only when calling those two functions. In order to actually use the variable, the dependee must explicitely declare then when defining dependencies.</p>
+<p>#### LINK_TO_DEPENDEE</p>
+<p>Flag makes sense only if the tempalate generates targets and they are not of the type <cite>UTILITY</cite>. If the flag is set, the Beetroot will always call <cite>target_link_libraries()</cite>, even if the function <cite>apply_dependency_to_target()</cite> is defined. The call to <cite>target_link_libraries()</cite> will be placed _after_ the call of the <cite>apply_dependency_to_target()</cite>.</p>
+<p>This option has exactly the same meaning as the option of the same name in the external project set, so there is no point in setting them in both places.</p>
+<p>#### GENERATE_TARGETS_INCLUDE_LINKPARS</p>
+<p>This flag makes link parameters available to <cite>generate_targets()</cite>. They can be used for actions that do not lead to generation of targets, such as test making or installation. If they are used for parametrization of targets, subtle errors can happen.</p>
+<p>### External project options</p>
+<p>At the moment the beetroot does not allow the user to call the <cite>ExternalProject_Add</cite> directly. Instead it allowd for several customizations, that are passed through <cite>DEFINE_EXTERNAL_PROJECT</cite> variable defined in <cite>targets.cmake</cite>. Defining this structure is the only way to force the <cite>targets.cmake</cite> to describe an external project.</p>
+<p><cite>DEFINE_EXTERNAL_PROJECT</cite> accepts the following parameters:</p>
+<p>#### <cite>ASSUME_INSTALLED</cite>.</p>
+<p>An option. If set, the beetroot would not call <cite>ExternalProject_Add</cite> at all and assume the external project is already installed, either in the default system folder or in the folder specified by <cite>PATH</cite></p>
+<p>#### <cite>SOURCE_PATH</cite></p>
+<p>Path with the source of the project. Not relevant if <cite>ASSUME_INSTALLED</cite>. If relative it will be based on <cite>${SUPERBUILD_ROOT}</cite></p>
+<p>#### <cite>INSTALL_PATH</cite></p>
+<p>Optional. Path where the project will be installed during build. If there are two or more incompatible with each other variants of this target required, this path will be suffixed by the hash of the build options passed to the <cite>ExternalProject_Add</cite>. If relative it will be based on <cite>${SUPERBUILD_ROOT}</cite></p>
+<p>#### <cite>EXPORTED_TARGETS_PATH</cite></p>
+<p>Optional. Relative path to the INSTALL_PATH (either automatic or manual) where the exported targets will be searched for. This is the directory where CMake expects to find &lt;Name&gt;Config.cmake file. By default the Beetroot will look in the directories <cite>cmake</cite> and the root of the installation folder.</p>
+<p>#### <cite>WHAT_COMPONENTS_NAME_DEPENDS_ON</cite></p>
+<p>Optional vector of strings. Specify extra infixes to the automatic install path. Elements are named after names of .cmake plugin files in the folder <cite>build_install_prefix_plugins</cite>. Each file describes the process of derriving a name of the given dependency. Note, that this setting is purely aestetic, it does not imply any actual dependencies - for those you need to define declare_dependencies() function and put them there. Also note, that this setting will get ignored if <cite>INSTALL_PATH</cite> is specified or <cite>ASSUME_INSTALLED</cite>.</p>
+<p>#### <cite>COMPONENTS</cite></p>
+<p>Optional vector of strings. Each element of this parameter will get passed to the <cite>find_package</cite> call during the project build run.</p>
+<p>#### <cite>BUILD_PARAMETERS</cite></p>
+<p>Optional vector of strings. Names parameters defined in either <cite>TARGET_PARAMETERS</cite> or <cite>TARGET_FEATURES</cite> to pass to the <cite>ExternalProject_Add</cite> during build. Ignored when <cite>ASSUME_INSTALLED</cite>. If missing, all parameters from <cite>TARGET_PARAMETERS</cite> and <cite>TARGET_FEATURES</cite> will be forwarded to the external project.</p>
+<p>#### LINK_TO_DEPENDEE</p>
+<p>Flag makes sense only if the tempalate generates targets and they are not of the type <cite>UTILITY</cite>. If the flag is set, the Beetroot will always call <cite>target_link_libraries()</cite>, even if the function <cite>apply_dependency_to_target()</cite> is defined. The call to <cite>target_link_libraries()</cite> will be placed _after_ the call of the <cite>apply_dependency_to_target()</cite>.</p>
+<p>This option has exactly the same meaning as the option of the same name in the template global options set, so there is no point in setting them in both places.</p>
+<p>### Parameter specification</p>
+<p>Parameters that can be passed to the template (e.g. target) are distinguished by their container type (<cite>OPTION</cite>, <cite>SCALAR</cite> and <cite>VECTOR</cite>) and their type (<cite>STRING</cite> <cite>INTEGER</cite> <cite>BOOL</cite> and <cite>CHOICE</cite>). Type <cite>CHOICE</cite> is further parametrized by the individual allowed values.</p>
+<p>#### Container type</p>
+<p>##### <cite>OPTION</cite></p>
+<p>Container <cite>OPTION</cite> can hold only variables of the type <cite>BOOL</cite>, and hence the only type allowed for it is either <cite>BOOL</cite> or empty string. It behaves diffently from <cite>BOOL</cite> <cite>SCALAR</cite> only when passed as a parameter via function call. Just like in base CMake, <cite>OPTION</cite> parsing is implemented using <cite>cmake_parse_arguments</cite>, so it does not require a value. E.g. if</p>
+<p><a href="#id9"><span class="problematic" id="id10">``</span></a>`
+set(TARGET_PARAMETERS</p>
+<blockquote>
+<div>USE_GPU OPTION  “” 0
+USE_CPU SCALAR  BOOL 0</div></blockquote>
+<div class="section" id="id11">
+<h1>)<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h1>
+<p>we use it like this:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">get_target(&lt;template</span> <span class="pre">name&gt;</span> <span class="pre">USE_GPU</span> <span class="pre">USE_CPU</span> <span class="pre">1)</span>
+<span class="pre">`</span></code>
+to set both values and
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">get_target(&lt;template</span> <span class="pre">name&gt;</span> <span class="pre">USE_CPU</span> <span class="pre">0)</span>
+<span class="pre">`</span></code>
+to unset.</p>
+<p>Please note that there is no way to unset an option that is already set by default.</p>
+<p><cite>OPTION</cite> can be used for features, and set option overrides unset option.</p>
+<p>##### <cite>SCALAR</cite></p>
+<p><cite>SCALAR</cite> can hold only a single value of the type <cite>TYPE</cite>. There are 5 different types:</p>
+<ul class="simple">
+<li><cite>BOOL</cite> is equivalent to CMake <cite>BOOL</cite> type, and can hold only two distinct values. The only legal way to test boolean values if by using <cite>if(BOOL_VARIABLE)</cite> CMake construct, because <cite>BOOL</cite> internally is a string that can hold any of the following values for false: <cite>0</cite>‚ <cite>OFF</cite>, <cite>NO</cite>, <cite>FALSE</cite>, <cite>N</cite>, <cite>IGNORE</cite> and <cite>NOTFOUND</cite> and the following values for true: <cite>1</cite>, <cite>ON</cite>, <cite>YES</cite>, <cite>TRUE</cite> and <cite>Y</cite>.</li>
+<li><cite>INTEGER</cite> can hold any positive integer. Scientific notation is not supported.</li>
+<li><cite>PATH</cite> can hold any existing or nonexisting file or directory path or empty string. At the moment of writing there are no rules to validate values of this type.</li>
+<li><cite>STRING</cite> can hold arbitrary string, including the empty string. No value validation whatsoever.</li>
+<li><cite>CHOICE(&lt;colon-separated list of strings&gt;)</cite> can hold string that are present in the specified set. The strings cannot contain the colon, as this character is used to separate them. Empty string is not allowed unless explicitely specified like this <cite>CHOICE(:VARIANT1:VARIANT2)</cite> or <cite>CHOICE(VARIANT1:VARIANT2:)</cite>.</li>
+</ul>
+<p>If <cite>SCALAR</cite> is used for feature, the rules for overriding depend on the type:</p>
+<ul class="simple">
+<li>If the type is <cite>BOOL</cite>, <cite>CHOICE</cite>, <cite>STRING</cite> and <cite>PATH</cite> then the non-default value overrides the default. Two non-default values cannot override each other and will result in different target (if that is allowd) or the error will be generated (for static targets).</li>
+<li>If the type is <cite>INTEGER</cite> then bigger value overrides smaller.</li>
+</ul>
+<p>For example, suppose we have a template with the following features:</p>
+<p><a href="#id12"><span class="problematic" id="id13">``</span></a>`
+set(TARGET_FEATURES</p>
+<blockquote>
+<div>F_VERSION       SCALAR                                  INTEGER “14”
+F_FLAG          SCALAR                                  BOOL    “YES”
+F_SOME_PATH     SCALAR                                  PATH    “”
+F_COMPILER      CHOICE(clang:gnu:intel) STRING  clang
+F_FLAVOUR       SCALAR                                  STRING  “debian”</div></blockquote>
+<p>)</p>
+<p><a href="#id14"><span class="problematic" id="id15">``</span></a><a href="#id16"><span class="problematic" id="id17">`</span></a></p>
+<dl class="docutils">
+<dt><a href="#id18"><span class="problematic" id="id19">``</span></a><a href="#id20"><span class="problematic" id="id21">`</span></a></dt>
+<dd>get_target(&lt;template_name&gt; F_FLAVOUR “git”)
+get_target(&lt;template_name&gt; F_FLAVOUR “custom”)
+get_target(&lt;template_name&gt; F_FLAG “NO”)</dd>
+</dl>
+<p><a href="#id22"><span class="problematic" id="id23">``</span></a><a href="#id24"><span class="problematic" id="id25">`</span></a></p>
+<p>First two lines will instantiate two targets, one with <cite>F_FLAVOUR</cite> set to “git” and the other with <cite>F_FLAVOUR</cite> set to “custom”, because there neither set of features overrides the other.
+The third line will generate an error, because of ambivalency, since there is more than one target that is eligible to apply the feature <cite>F_FLAG</cite>.</p>
+<dl class="docutils">
+<dt><a href="#id26"><span class="problematic" id="id27">``</span></a><a href="#id28"><span class="problematic" id="id29">`</span></a></dt>
+<dd>get_target(&lt;template_name&gt; F_VERSION 15)
+get_target(&lt;template_name&gt; F_VERSION 23)
+get_target(&lt;template_name&gt; F_FLAG “NO”)</dd>
+</dl>
+<p><a href="#id30"><span class="problematic" id="id31">``</span></a><a href="#id32"><span class="problematic" id="id33">`</span></a></p>
+<p>Integer 23 overrides both 15 and the default value of 14 so, there is no conflict and no need to instantiate separate targets. Likewise <cite>NO</cite> overrides the default (here <cite>YES</cite>). That’s why all the lines will instantiate exactly one target, with <cite>${F_VERSION}</cite> equal to 23 and <cite>${F_FLAG}</cite> equal to <cite>NO</cite>.</p>
+<p>##### <cite>VECTOR</cite></p>
+<p><cite>VECTOR</cite> containers store a set of values of the specified <cite>TYPE</cite>. Each value of the <cite>VECTOR</cite> container must be of the same type. If <cite>TYPE</cite> is <cite>STRING</cite> or <cite>PATH</cite> the elements cannot contain colon (<cite>:</cite>) and semicolon (<cite>;</cite>) characters.</p>
+<p><cite>VECTOR</cite> can be used for features, and a set that contains a superset of values can override the smaller set. Example:</p>
+<p><a href="#id34"><span class="problematic" id="id35">``</span></a>`
+set(TARGET_FEATURES</p>
+<blockquote>
+<div>COMPONENTS      VECTOR  STRING  “COMP_A;COMP_B”</div></blockquote>
+<p>)</p>
+<p>set(TARGET_PARAMETERS
+…
+)</p>
+<p><a href="#id36"><span class="problematic" id="id37">``</span></a><a href="#id38"><span class="problematic" id="id39">`</span></a></p>
+<p>A following in <cite>CMakeLists.txt</cite> or inside <cite>declare_dependencies()</cite></p>
+<dl class="docutils">
+<dt><a href="#id40"><span class="problematic" id="id41">``</span></a><a href="#id42"><span class="problematic" id="id43">`</span></a></dt>
+<dd>get_target(&lt;template_name&gt; &lt;target_parameters&gt; COMPONENTS COMP_B COMP_D)</dd>
+</dl>
+<p><a href="#id44"><span class="problematic" id="id45">``</span></a>`
+declares that we need a target with <cite>&lt;target_parameters&gt;</cite> and <cite>${COMPONENTS}</cite> must contain <cite>COMP_B</cite> and <cite>COMP_D</cite>. Note that as expected the default value for <cite>COMPONENTS</cite> is ignored if we specify this parameter (here: feature) explicitely.</p>
+<p>If in <cite>CMakeLists.txt</cite> or inside <cite>declare_dependencies()</cite> of any built target there is a following line with the with the same <cite>template_name</cite>
+<a href="#id46"><span class="problematic" id="id47">``</span></a><a href="#id48"><span class="problematic" id="id49">`</span></a></p>
+<blockquote>
+<div>request_feature(&lt;template_name&gt; COMPONENTS COMP_C)</div></blockquote>
+<p><a href="#id50"><span class="problematic" id="id51">``</span></a>`
+then furthermore the target’s $`{COMPONENTS}` will include COMP_C, so in the end <cite>COMPONENTS</cite> will be equal <cite>COMP_B;COMP_C;COMP_D</cite> (order is unspecified).</p>
+<p>### Q&amp;A</p>
+<p>Q: What are the consequences of defining <cite>generate_targets()</cite>?
+A: If the function is defined, the Beetroot would make sure, that the announced targets are actually made.</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">The Beetroot Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="about.html">Steps to start using the Beetroot:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html#how-does-the-beetroot-work">How does the Beetroot work?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">List of most important and complex Beetroot functionalities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html#list-of-the-most-visible-features-of-the-beetroot">List of the most visible features of the Beetroot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="start.html">Getting started</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Adam Ryczkowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/manual.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
