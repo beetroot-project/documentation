@@ -18,11 +18,11 @@ All those functions are parametrized by the three categories of variables, which
 
 If you find yourself defining a large list of `TARGET_PARAMETERS` over and over again for different targets (for instance to pass targets from a library to a consumer), you can spare yourself a time and call a function `include_target_parameters_of(TEMPLATE_NAME)` in the targets body (i.e. outside of any functions defined therein) to include all the target parameters defined in that file. The file will be processed in the context just after parsing the targets file, including all declared and non-declared variables defined in this file.
 
-#### include_target_parameters_of()
+#### include_target_parameters_of()::
 
-```
+
 	include_target_parameters_of(<TEMPLATE_NAME> [ALL_EXCEPT <VAR_NAME>... | INCLUDE_ONLY <VAR_NAME>...])
-```
+
 
 Use this function to import `TARGET_PARAMETERS` from another template file. Only the variable definitions will be imported, just like if you would paste them into the own `TARGET_PARAMETERS`, not other variables and it will not set a build dependency. If the included file itself includes target parameters, they can be included too. 
 
@@ -133,20 +133,20 @@ Parameters that can be passed to the template (e.g. target) are distinguished by
 
 ##### `OPTION`
 
-Container `OPTION` can hold only variables of the type `BOOL`, and hence the only type allowed for it is either `BOOL` or empty string. It behaves diffently from `BOOL` `SCALAR` only when passed as a parameter via function call. Just like in base CMake, `OPTION` parsing is implemented using `cmake_parse_arguments`, so it does not require a value. E.g. if
+Container `OPTION` can hold only variables of the type `BOOL`, and hence the only type allowed for it is either `BOOL` or empty string. It behaves diffently from `BOOL` `SCALAR` only when passed as a parameter via function call. Just like in base CMake, `OPTION` parsing is implemented using `cmake_parse_arguments`, so it does not require a value. E.g. if::
 
-```
-set(TARGET_PARAMETERS
-	USE_GPU	OPTION	"" 0
-	USE_CPU	SCALAR	BOOL 0
-)
-```
 
-we use it like this:
+	set(TARGET_PARAMETERS
+		USE_GPU	OPTION	"" 0
+		USE_CPU	SCALAR	BOOL 0
+	)
 
-```
-get_target(<template name> USE_GPU USE_CPU 1)
-```
+
+we use it like this::
+
+
+	get_target(<template name> USE_GPU USE_CPU 1)
+
 to set both values and 
 ```
 get_target(<template name> USE_CPU 0)
@@ -172,33 +172,27 @@ If `SCALAR` is used for feature, the rules for overriding depend on the type:
 * If the type is `BOOL`, `CHOICE`, `STRING` and `PATH` then the non-default value overrides the default. Two non-default values cannot override each other and will result in different target (if that is allowd) or the error will be generated (for static targets).
 * If the type is `INTEGER` then bigger value overrides smaller.
 
-For example, suppose we have a template with the following features:
+For example, suppose we have a template with the following features::
 
-```
-set(TARGET_FEATURES
-	F_VERSION	SCALAR					INTEGER	"14"
-	F_FLAG		SCALAR					BOOL	"YES"
-	F_SOME_PATH	SCALAR					PATH	""
-	F_COMPILER	CHOICE(clang:gnu:intel)	STRING	clang
-	F_FLAVOUR	SCALAR					STRING	"debian"
-)
 
-```
-
-```
+	set(TARGET_FEATURES
+		F_VERSION	SCALAR					INTEGER	"14"
+		F_FLAG		SCALAR					BOOL	"YES"
+		F_SOME_PATH	SCALAR					PATH	""
+		F_COMPILER	CHOICE(clang:gnu:intel)	STRING	clang
+		F_FLAVOUR	SCALAR					STRING	"debian"
+	)
+	
 	get_target(<template_name> F_FLAVOUR "git") 
 	get_target(<template_name> F_FLAVOUR "custom")
 	get_target(<template_name> F_FLAG "NO")
-```
 
 First two lines will instantiate two targets, one with `F_FLAVOUR` set to "git" and the other with `F_FLAVOUR` set to "custom", because there neither set of features overrides the other.
-The third line will generate an error, because of ambivalency, since there is more than one target that is eligible to apply the feature `F_FLAG`.
+The third line will generate an error, because of ambivalency, since there is more than one target that is eligible to apply the feature `F_FLAG`.::
 
-```
 	get_target(<template_name> F_VERSION 15) 
 	get_target(<template_name> F_VERSION 23)
 	get_target(<template_name> F_FLAG "NO")
-```
 
 Integer 23 overrides both 15 and the default value of 14 so, there is no conflict and no need to instantiate separate targets. Likewise `NO` overrides the default (here `YES`). That's why all the lines will instantiate exactly one target, with `${F_VERSION}` equal to 23 and `${F_FLAG}` equal to `NO`.
 

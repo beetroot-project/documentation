@@ -79,12 +79,12 @@ List of the most visible features of the Beetroot
 ===========================================================
 
 Targets are defined inside the function ``generate_target()`` in target definition file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In CMake targets (in contrast to variables) are internally represented by the object which lives in a global namespace, even if defined inside the function. Putting target definitions inside a function prevents leaking of temporary variables and pollution of the variable namespace. 
 
 Dependencies of targets are set inside the function ``declare_dependencies()`` in target definition file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Target dependencies are handled by function rather than data structure, which allows for maximum flexibility (dependencies can depend in complicated way on the target parameters/features). Because Beetroot structure needs dependencies to be resolved *before* target definition (and possibly be called multiple times on the same target), the only place to put them is in a dedicated user-supplied function. Code inside this function should be omnipotent, because it can be executed multiple times in a single run. The code will be executed only during the target declaration phase.
 
