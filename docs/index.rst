@@ -4,10 +4,9 @@
    contain the root `toctree` directive.
 
 .. image:: beetroot.png
-   :width: 200px
-   :height: 100px
+   :width: 400px
+   :height: 400px
    :scale: 50 %
-   :alt: alternate text
    :align: right
 
 Welcome to The Beetroot Project's documentation!

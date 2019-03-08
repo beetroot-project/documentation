@@ -60,7 +60,7 @@ We also need to adjust the ``CMakeLists.txt`` to have the Beetroot actually exec
    
    finalize()
 
-Our final folder structure should look like this:
+Our final folder structure should look like this::
 
 
 | project_folder
