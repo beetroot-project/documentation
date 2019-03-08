@@ -22,7 +22,7 @@ Suppose this is our ``source.cpp``::
       return 0;
    }
 
-For reference, to build it plain CMake, this would be our ``CMakeLists.txt``:
+For reference, to build it plain CMake, this would be our ``CMakeLists.txt``::
 
    cmake_minimum_required(VERSION 3.5)
    project(hello_simple)
@@ -30,11 +30,14 @@ For reference, to build it plain CMake, this would be our ``CMakeLists.txt``:
 
 Our file structure would like this::
 
-project_folder/
-|
-+- build/
-+- source.cpp
-+- CMakeLists.txt
+
+| project_folder
+| ├── build
+| │   └── ...
+| ├── source.cpp
+| └── CMakeLists.txt
+| 
+| 
 
 To be able to compile this code using Beetroot, we need first to make beetroot accessible to our build. If you use git, the preferred way to do that is to put the beetroot repository as a (shallow) submodule of your project, in folder ``cmake/beetroot``.
 
@@ -60,13 +63,19 @@ We also need to adjust the ``CMakeLists.txt`` to have the Beetroot actually exec
 Our final folder structure should look like this:
 
 
-project_folder/
-+- cmake
-|  +- beetroot (beetroot clone)
-|  +- root.cmake 
-+- source.cpp
-+- targets.cmake
-+- CMakeLists.txt
+| project_folder
+| ├── build
+| │   └── ...
+| ├── cmake
+| │   ├── beetroot (beetroot clone)
+| │   │   └── ...
+| │   └── root.cmake
+| ├── source.cpp
+| ├── targets.cmake
+| └── CMakeLists.txt
+| 
+| 
+
 
 And finally we are set. Keep in mind, that Beetroot is designed to work best with middle and large size projects, so the amount of work to get the simplest C++ code compile is offset by the time we save when the project grows.
 
@@ -149,7 +158,7 @@ Let's say, that this file is our unit test and we need to compile three of them,
    finalize()
 
 
-After we build, we should get three executables: ``hello_simple1``, ``hello_simple2`` and ``hello_simple3``.
+After we build, we should get three executables: ``hello_simple1``, ``hello_simple2`` and ``hello_simple3``.::
 
    $./hello_simple1
    Hello Beetroot!
