@@ -9,16 +9,16 @@
    :scale: 50 %
    :align: right
 
-Welcome to The Beetroot Project's documentation!
-================================================
+The Beetroot Project's documentation
+======================================
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    about
-   features
    start
+   features
 
 
 Indices and tables

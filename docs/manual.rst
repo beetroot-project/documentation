@@ -18,13 +18,14 @@ All those functions are parametrized by the three categories of variables, which
 
 If you find yourself defining a large list of `TARGET_PARAMETERS` over and over again for different targets (for instance to pass targets from a library to a consumer), you can spare yourself a time and call a function `include_target_parameters_of(TEMPLATE_NAME)` in the targets body (i.e. outside of any functions defined therein) to include all the target parameters defined in that file. The file will be processed in the context just after parsing the targets file, including all declared and non-declared variables defined in this file.
 
-#### include_target_parameters_of()::
+#### include_target_parameters_of, include_features_of and include_link_parameters_of::
 
 
-	include_target_parameters_of(<TEMPLATE_NAME> [ALL_EXCEPT <VAR_NAME>... | INCLUDE_ONLY <VAR_NAME>...])
+	<function_name>(<TEMPLATE_NAME> [NONRECURSIVE] [SOURCE LINKPARS|LINK_PARAMETERS|PARAMETERS|FEATURES] [ALL_EXCEPT <VAR_NAME>... | INCLUDE_ONLY <VAR_NAME>...])
 
+Use any of these functions to import any kind of parameters as any other kind of parameters. The syntax of this function will change, but at the moment there is no limit on what combinations of types of parameters to convert.  `NONRECURSIVE` mean, that that only the parameters declared directly in the target will get imported. `SOURCE` determines what is the source of the parameters; `LINKPARS` and `LINK_PARAMETERS` are synonims. `TARGET_PARAMETERS` from another template file. Only the variable definitions will be imported, just like if you would paste them into the own `TARGET_PARAMETERS`, not other variables and it will not set a build dependency. If the included file itself includes target parameters, they can be included too. 
 
-Use this function to import `TARGET_PARAMETERS` from another template file. Only the variable definitions will be imported, just like if you would paste them into the own `TARGET_PARAMETERS`, not other variables and it will not set a build dependency. If the included file itself includes target parameters, they can be included too. 
+#### 
 
 ### apply_dependency_to_target()
 

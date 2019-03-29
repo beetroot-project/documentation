@@ -167,4 +167,148 @@ After we build, we should get three executables: ``hello_simple1``, ``hello_simp
    $./hello_simple3
    Hello Mars!
 
+The ``targets.cmake`` defines a target _template_, that can be used to define as many targets, as there are unique combinations of target parameters. That is why the ``generate_targets()`` function requires user to use ``${TARGET_NAME}`` instead of hard-coded name, that is usual in standard CMake practice. The function will be called exactly once for each distinct ``${TARGET_NAME}`` that Beetroot found is required to satisfy the parameters.
+
+Subprojects
+^^^^^^^^^^^
+Here you will learn how to combine targets together.
+
+Suppose we have a program, that requires a function ``get_string`` from a library to run. The `hello_with_lib.cpp`::
+
+	#include <iostream>
+	#include "libhello.h"
+	
+	#ifndef LIBPAR
+	#define LIBPAR 0
+	#endif
+	
+	int main()
+	{
+	  int libpar = LIBPAR;
+	  
+	  std::cout << "Hello "<< get_string()<<"!"<< std::endl;
+	  return 0;
+	}
+
+To compile it, we need a `libhello.h` that provides the ``get_string()``::
+
+	#include<string>
+	std::string get_string();
+
+The library's implementation is in the file ``libhello.cpp``::
+
+	#include "libhello.h"
+	#define STRINGIFY2(X) #X
+	#define STRINGIFY(X) STRINGIFY2(X)
+
+	#ifndef WHO
+	#define WHO World
+	#endif
+
+	std::string get_string() {
+		return(STRINGIFY(WHO));
+	}
+
+The library depends on one macro: ``WHO`` that influences the text returned by the function.
+
+We would like to have the ``hello_with_lib.cpp`` compiled and linked with the ``libhello``. Although there is nothing wrong with putting the additional CMake commands in the old ``targets.cmake`` file, it is not the best practice. Instead we will create two separate targets, so it will be easy to re-use the ``libhello`` by simply importing it.
+
+Another thing to notice is that the Beetroot be default does not care about the location of the target definitions. Instead it scans recursively all the superproject files in search for files ``targets.cmake`` and subfolder structure ``cmake/targets/*.cmake``. Then it loads each fond file and learns the name of the targets/templates exposed there to build a mapping target/template name -> path of the target definition file, so user does not need to care about the paths anymore. On the other hand it requires that each each target/template name is unique across the whole superproject.
+
+Let's create the following directory structure::
+
+
+| superproject
+| ├── cmake
+| │   ├── beetroot (beetroot clone)
+| │   │   └── ...
+| │   └── root.cmake
+| ├── hello_with_lib
+| │   ├── hello_with_lib.cpp
+| │   ├── CMakeLists.txt
+| │   └── targets.cmake
+| └── libhello
+| │   ├── include
+| │   │   └── libhello.h
+| │   ├── source
+| │   │   └── libhello.cpp
+| │   └── targets.cmake
+| └── CMakeLists.txt
+| 
+| 
+
+This is the definition of the ``libhello/targets.cmake``::
+
+   set(ENUM_TEMPLATES LIBHELLO)
+   
+   set(TARGET_PARAMETERS 
+      WHO	SCALAR	STRING	"Jupiter"
+   )
+   
+   function(generate_targets TEMPLATE_NAME)
+      add_library(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/source/libhello.cpp")
+      add_source(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/libhello.h") #For better IDE integration
+      
+      target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+      target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}")
+   endfunction()
+
+Nothing new, except we use ``add_library`` instead of ``add_executable``. Adding ``libhello.h`` to sources is not strictly necessary, but is a good CMake practice, that helps various IDE generators generate better projects. 
+
+This is the definition of the ``hello_with_lib/targets.cmake``::
+
+   set(ENUM_TEMPLATES HELLO_WITH_LIB)
+   
+   function(declare_dependencies TEMPLATE_NAME)
+      build_target(LIBHELLO WHO "Saturn")
+   endfunction()
+   
+   function(generate_targets TEMPLATE_NAME)
+      add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/hello_with_lib.cpp")
+   endfunction()
+
+The new element, the ``declare_dependencies()`` function, is used to declare dependencies. It is a function, so user can build complex logic that turns certain dependencies on and off depending on the Target Parameters and Features. To declare a certain target/template a dependency we call a function ``build_target(<TEMPLATE_OR_TARGET_NAME> [<PARAMETERS>...])``. The API and behaviour is exactly the same, as in ``CMakeLists.txt``.
+
+Let's step up our example and require that the ``HELLO_WITH_LIB`` is also parametrized by the parameter ``WHO``. There are two ways to do it. The most obvious one is simply to add the ``set(TARGET_PARAMETERS WHO SCALAR STRING "Jupiter")`` to the ``hello_with_lib/targets.cmake`` but that will not scale, if there are many parameters in question and they change. The better solution is to import the parameters using the special function designed for this purpose.
+
+This is the definition of the ``hello_with_lib/targets.cmake``::
+
+   set(ENUM_TEMPLATES HELLO_WITH_LIB)
+   
+   include_target_parameters_of(LIBHELLO)
+   
+   function(declare_dependencies TEMPLATE_NAME)
+      build_target(LIBHELLO WHO "Saturn")
+   endfunction()
+   
+   function(generate_targets TEMPLATE_NAME)
+      add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/hello_with_lib.cpp")
+   endfunction()
+
+
+
+Now let's complicate matters a bit and add two things. First imagine, that the ``hello_with_lib`` is also responsible for setting a macro variable in the client's code. Let's predend that this variable modifies behaviour of the header-only part of this library. Consequently will not change the library code. We only need to make sure, that clients linking to our library receive a new preprocessor macro::
+
+   set(ENUM_TEMPLATES LIBHELLO)
+   
+   set(TARGET_PARAMETERS 
+      WHO	SCALAR	STRING	"Jupiter"
+   )
+   
+   set(LINK_PARAMETERS 
+      LIBPAR	INTEGER	
+   )
+   
+   function(generate_targets TEMPLATE_NAME)
+      add_library(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/source/libhello.cpp")
+      add_source(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/libhello.h") #For better IDE integration
+      
+      target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+      target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}")
+   endfunction()
+
+   function(apply_dependency_to_target DEPENDEE_TARGET_NAME OUR_TARGET_NAME)
+      target_compile_definitions(${DEPENDEE_TARGET_NAME} PRIVATE "LIBPAR=${LIBPAR}")
+   endfunction()
+
 
