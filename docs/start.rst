@@ -1,8 +1,17 @@
 Getting started
 ===============
 
+Set up the beetroot
+^^^^^^^^^^^^^^^^^^^
 
-The Hello World
+Setting up simply means making the code of the beetroot somehow available to the CMake building process and making sure the Beetroot knows where is our superbuild root. The first part is as simple, as including the ``beetroot.cmake`` in the beginning of the  ``CMakeLists.txt``. To specify the root directory of you project you can either set it yourself using ``set(SUPERBUILD_ROOT <path>)`` *before* including the Beetroot, or relying on the Beetroots' heuristics that assume that the root directory is the topmost directory relative to the ``CMakeLists.txt`` project that contains ``CMakeLists.txt``[1]_ . 
+.. [1] Beetroot tries to find superproject root using the following algorithm: The root directory is assumed to be the first directory containing ``CMakeLists.txt`` that is followed by two immidiate parent directories that are either without this file, or are a root of the filesystem. 
+
+Perhaps the simplest way to incorporate the Beetroot into your project is to either clone it into a projects' subdirectory or make it a submodule if you already use git. 
+
+
+
+The simplest Hello World
 ^^^^^^^^^^^^^^^
 
 We will to start small, with the very simple C++ CMake build. 
@@ -28,7 +37,7 @@ For reference, to build it plain CMake, this would be our ``CMakeLists.txt``::
    project(hello_simple)
    add_executable(hello_simple source.cpp)
 
-Our file structure would like this::
+So far our file structure would like this::
 
 
 | project_folder
@@ -39,20 +48,25 @@ Our file structure would like this::
 | 
 | 
 
-To be able to compile this code using Beetroot, we need first to make beetroot accessible to our build. If you use git, the preferred way to do that is to put the beetroot repository as a (shallow) submodule of your project, in folder ``cmake/beetroot``.
+To be able to compile this code using Beetroot, we need first to make beetroot accessible to our build. Let's clone the beetroot into the subfolder cmake
+
+| $ cd project_folder
+| $ mkdir cmake
+| $ cd cmake
+| $ git clone --depth 1 https://github.com/beetroot-project/beetroot.git
 
 Then we put the following content in the ``targets.cmake``::
 
    set(ENUM_TEMPLATES HELLO_SIMPLE)
    
    function(generate_targets TEMPLATE_NAME)
-      add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/test.cpp")
+      add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/source.cpp")
    endfunction()
 
 We also need to adjust the ``CMakeLists.txt`` to have the Beetroot actually executed::
 
    cmake_minimum_required(VERSION 3.13)
-   include(../cmake/beetroot/beetroot_bootstrap)
+   include(cmake/beetroot/cmake/beetroot)
    
    project(hello_simple)
    
@@ -67,9 +81,8 @@ Our final folder structure should look like this::
 | ├── build
 | │   └── ...
 | ├── cmake
-| │   ├── beetroot (beetroot clone)
-| │   │   └── ...
-| │   └── root.cmake
+| │   └── beetroot (beetroot clone)
+| │       └── ...
 | ├── source.cpp
 | ├── targets.cmake
 | └── CMakeLists.txt
@@ -116,7 +129,11 @@ We compile it as usual::
    $ ./hello_simple
    Hello World!
 
-Now let's start complicating things. You may have noticed, that we have a macro parameter ``WHO`` in our C++ file, that can be used to change the program output. Let's do just that. After all, handling target parameters is one of the strongest sides of Beetroot. Let's modify our ``targets.cmake`` and insert definition of the parameter, which we will also call ``WHO``::
+The Hello World with parameter
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Now let's start complicating things. You may have noticed, that we have a macro parameter ``WHO`` in our C++ file, that can be used to change the program's output. Let's do just that. After all, handling target parameters is one of the strongest sides of Beetroot. Let's modify our ``targets.cmake`` and insert definition of the parameter, which we will also call ``WHO``::
 
    set(ENUM_TEMPLATES HELLO_SIMPLE)
    
@@ -146,7 +163,7 @@ If we compile the program and run we get::
 Let's say, that this file is our unit test and we need to compile three of them, one for the default string, and the other for a special string "Mars" and "Venus". It is easy with Beetroot, and by doing this we will demonstrate two ways of passing variables to targets. Let's re-write the ``CMakeLists.txt``::
 
    cmake_minimum_required(VERSION 3.13)
-   include(../cmake/beetroot/beetroot_bootstrap)
+   include(../cmake/beetroot/cmake/beetroot_bootstrap)
    
    project(hello_simple)
    
@@ -169,9 +186,9 @@ After we build, we should get three executables: ``hello_simple1``, ``hello_simp
 
 The ``targets.cmake`` defines a target _template_, that can be used to define as many targets, as there are unique combinations of target parameters. That is why the ``generate_targets()`` function requires user to use ``${TARGET_NAME}`` instead of hard-coded name, that is usual in standard CMake practice. The function will be called exactly once for each distinct ``${TARGET_NAME}`` that Beetroot found is required to satisfy the parameters.
 
-Subprojects
-^^^^^^^^^^^
-Here you will learn how to combine targets together.
+Targets composed from components
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Here you will learn how to combine targets together and use more realistic folder structure.
 
 Suppose we have a program, that requires a function ``get_string`` from a library to run. The `hello_with_lib.cpp`::
 
@@ -211,9 +228,9 @@ The library's implementation is in the file ``libhello.cpp``::
 
 The library depends on one macro: ``WHO`` that influences the text returned by the function.
 
-We would like to have the ``hello_with_lib.cpp`` compiled and linked with the ``libhello``. Although there is nothing wrong with putting the additional CMake commands in the old ``targets.cmake`` file, it is not the best practice. Instead we will create two separate targets, so it will be easy to re-use the ``libhello`` by simply importing it.
+We would like to have the ``hello_with_lib.cpp`` compiled and linked with the ``libhello``. Although there is nothing wrong with putting the additional CMake commands in the old ``targets.cmake`` file, it is better to modularize our design and create two separate targets, so it will be easy to re-use the ``libhello`` by simply importing it.
 
-Another thing to notice is that the Beetroot be default does not care about the location of the target definitions. Instead it scans recursively all the superproject files in search for files ``targets.cmake`` and subfolder structure ``cmake/targets/*.cmake``. Then it loads each fond file and learns the name of the targets/templates exposed there to build a mapping target/template name -> path of the target definition file, so user does not need to care about the paths anymore. On the other hand it requires that each each target/template name is unique across the whole superproject.
+Now is a time notice that the Beetroot by default does not care about the location of the target definitions. Instead it scans recursively all the superproject files in search for files ``targets.cmake`` and subfolder structure ``cmake/targets/*.cmake``. Then it loads each fond file and learns the name of the targets/templates exposed there to build a mapping target/template name -> path of the target definition file, so user does not need to care about the paths anymore. On the other hand it requires that each each target/template name is unique across the whole superproject.
 
 Let's create the following directory structure::
 
@@ -227,7 +244,7 @@ Let's create the following directory structure::
 | │   ├── hello_with_lib.cpp
 | │   ├── CMakeLists.txt
 | │   └── targets.cmake
-| └── libhello
+| ├── libhello
 | │   ├── include
 | │   │   └── libhello.h
 | │   ├── source
@@ -247,7 +264,7 @@ This is the definition of the ``libhello/targets.cmake``::
    
    function(generate_targets TEMPLATE_NAME)
       add_library(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/source/libhello.cpp")
-      add_source(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/libhello.h") #For better IDE integration
+      target_source(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/libhello.h") #For better IDE integration
       
       target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
       target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}")
@@ -269,13 +286,47 @@ This is the definition of the ``hello_with_lib/targets.cmake``::
 
 The new element, the ``declare_dependencies()`` function, is used to declare dependencies. It is a function, so user can build complex logic that turns certain dependencies on and off depending on the Target Parameters and Features. To declare a certain target/template a dependency we call a function ``build_target(<TEMPLATE_OR_TARGET_NAME> [<PARAMETERS>...])``. The API and behaviour is exactly the same, as in ``CMakeLists.txt``.
 
-Let's step up our example and require that the ``HELLO_WITH_LIB`` is also parametrized by the parameter ``WHO``. There are two ways to do it. The most obvious one is simply to add the ``set(TARGET_PARAMETERS WHO SCALAR STRING "Jupiter")`` to the ``hello_with_lib/targets.cmake`` but that will not scale, if there are many parameters in question and they change. The better solution is to import the parameters using the special function designed for this purpose.
+In ``hello_with_lib/CMakeLists.txt`` all we need is
+
+   cmake_minimum_required(VERSION 3.13)
+   include(../cmake/beetroot/cmake/beetroot.cmake)
+
+
+   project(hello_simple)
+
+   build_target(HELLO_WITH_LIB)
+
+   finalize()
+
+
+The location of the ``CMakeLists.txt`` is irrelevant in the Beetroot. You can as easily compile everything from within the root of the project if the root ``CMakeLists.txt`` is:
+
+   cmake_minimum_required(VERSION 3.13)
+   include(cmake/beetroot/cmake/beetroot.cmake)
+
+
+   project(hello_simple)
+
+   build_target(HELLO_WITH_LIB)
+
+   finalize()
+
+All we did aws a change to the directory of the beetroot library in the second line.
+
+Code generators
+^^^^^^^^^^^^^^^
+
+
+Let's step up our example and require that the ``HELLO_WITH_LIB`` is also parametrized by the parameter ``WHO``. There are two ways to do it. The most obvious one is simply to add the ``set(TARGET_PARAMETERS WHO SCALAR STRING "Jupiter")`` to the ``hello_with_lib/targets.cmake`` but that would lead to code duplication which will not scale, if there are many parameters in question and they change. The better solution is to import the parameters using the special function designed for this purpose.
 
 This is the definition of the ``hello_with_lib/targets.cmake``::
 
    set(ENUM_TEMPLATES HELLO_WITH_LIB)
    
-   include_target_parameters_of(LIBHELLO)
+   include_target_parameters_of(LIBHELLO
+   	INCLUDE_ONLY
+   		WHO
+   ) #Implicitly imports only WHO. See API reference to learn about all the options
    
    function(declare_dependencies TEMPLATE_NAME)
       build_target(LIBHELLO WHO "Saturn")
@@ -283,11 +334,50 @@ This is the definition of the ``hello_with_lib/targets.cmake``::
    
    function(generate_targets TEMPLATE_NAME)
       add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/hello_with_lib.cpp")
+      target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}") # ${WHO} is now available
    endfunction()
 
 
+Subcomponents that influence the parent
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Now let's complicate matters a bit and add two things. First imagine, that the ``hello_with_lib`` is also responsible for setting a macro variable in the client's code. Let's predend that this variable modifies behaviour of the header-only part of this library. Consequently will not change the library code. We only need to make sure, that clients linking to our library receive a new preprocessor macro::
+When we require the subcomponent in function ``declare_dependencies`` we have a total control of all the information (i.e. parameters) the component receive. But what if we want the component to influence the build process of the parent project as well? Imagine this simple logging example - we want to include logging support to our application by 
+
+TODO: Find a good case (better than target_compile_definitions with log or target_include_directories for header libraries)
+
+We have seen in `The Hello World with parameter`_ that for each unique variation of the parameters of the compoment Beetroot defines a distinct target. That is a welcome feature if the parameter modifies the compilation process of the component, but what if we need to parametrize *linking*?
+
+
+   #include <iostream>
+   #include <boost/log/trivial.hpp>
+
+   int main(int, char*[])
+   {
+       BOOST_LOG_TRIVIAL(info) << “This is an informational severity message”;
+       std::cin.get();
+       return 0;
+   }
+
+
+External projects and the superbuild idiom
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+External projects are CMake projects that need a separate CMake run to be built. If they are written properly, the act of installing them (after build) would result in the `<project name>Config.cmake` files describing the way the library shuld be linked to  our project. Those files are then be used when we import the library using CMake's command `find_packages()` or one of its specialized forms, like `find_boost()`.
+
+The library can either be already installed by the OS packaging system, or we need to provide the source code, build and install it ourselves. In the latter case, it is customary to include that library as our dependency in the form of a git submodule (if both the library and our project is using git) or download script executed during build. 
+
+The problem is that the `<project name>Config.cmake` files of the dependency appear only after it was build, and installed which is after the CMake finished running our script and there is no way for them to influence the configuration of our project, resuling in the build failure on the first build (The subsequent builds will be fine). The most robust way to solve this problem is to execute the *superbuild* idiom.
+
+Superbuild idiom means putting our project as the last external dependency of the "super project", which depends on all the external dependencies and building that project instead of the original. When user calls `cmake <our_project>` CMake first makes sure all the external projects are built and installed, and then at the end calls the CMake again to process our own project - this time we can be sure that all the dependencies are built and update. 
+
+Beetroot automatically switches to the superbuild idiom automatically everytime we define any external targets. 
+
+The Beetroot treats the target as external if the template file sets non-empty contents to the  *`DEFINE_EXTERNAL_PROJECT`* variable. There are 
+
+Non-compiled components (e.g. header libraries)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Imagine, that the ``hello_with_lib`` is also responsible for setting a macro variable in the client's code. Let's predend that this variable modifies behaviour of the header-only part of this library. Consequently will not change the library code. We only need to make sure, that clients linking to our library receive a new preprocessor macro::
 
    set(ENUM_TEMPLATES LIBHELLO)
    

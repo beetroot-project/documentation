@@ -25,7 +25,6 @@ If you find yourself defining a large list of `TARGET_PARAMETERS` over and over 
 
 Use any of these functions to import any kind of parameters as any other kind of parameters. The syntax of this function will change, but at the moment there is no limit on what combinations of types of parameters to convert.  `NONRECURSIVE` mean, that that only the parameters declared directly in the target will get imported. `SOURCE` determines what is the source of the parameters; `LINKPARS` and `LINK_PARAMETERS` are synonims. `TARGET_PARAMETERS` from another template file. Only the variable definitions will be imported, just like if you would paste them into the own `TARGET_PARAMETERS`, not other variables and it will not set a build dependency. If the included file itself includes target parameters, they can be included too. 
 
-#### 
 
 ### apply_dependency_to_target()
 
@@ -94,7 +93,7 @@ At the moment the beetroot does not allow the user to call the `ExternalProject_
 
 #### `ASSUME_INSTALLED`. 
 
-An option. If set, the beetroot would not call `ExternalProject_Add` at all and assume the external project is already installed, either in the default system folder or in the folder specified by `PATH`
+An option. If set, the beetroot would not call `ExternalProject_Add()` at all and assume the external project is already installed, either in the default system folder or in the folder specified by `PATH`
 
 #### `SOURCE_PATH`
 
@@ -102,25 +101,25 @@ Path with the source of the project. Not relevant if `ASSUME_INSTALLED`. If rela
 
 #### `INSTALL_PATH`
 
-Optional. Path where the project will be installed during build. If there are two or more incompatible with each other variants of this target required, this path will be suffixed by the hash of the build options passed to the `ExternalProject_Add`. If relative it will be based on `${SUPERBUILD_ROOT}`
+Optional. Path where the project will be installed during build. If there are two or more incompatible with each other variants of this target required, this path will be suffixed by the hash of the build options passed to the `ExternalProject_Add()`. If relative it will be based on `${SUPERBUILD_ROOT}`
 
 #### `EXPORTED_TARGETS_PATH`
 
-Optional. Relative path to the INSTALL_PATH (either automatic or manual) where the exported targets will be searched for. This is the directory where CMake expects to find <Name>Config.cmake file. By default the Beetroot will look in the directories `cmake` and the root of the installation folder.
+Optional. Relative path to the `INSTALL_PATH` (either automatic or manual) where the exported targets will be searched for. This is the directory where CMake expects to find `<Name>Config.cmake` file. By default the Beetroot will look in the directories `cmake` and the root of the installation folder.
 
 #### `WHAT_COMPONENTS_NAME_DEPENDS_ON`
 
-Optional vector of strings. Specify extra infixes to the automatic install path. Elements are named after names of .cmake plugin files in the folder `build_install_prefix_plugins`. Each file describes the process of derriving a name of the given dependency. Note, that this setting is purely aestetic, it does not imply any actual dependencies - for those you need to define declare_dependencies() function and put them there. Also note, that this setting will get ignored if `INSTALL_PATH` is specified or `ASSUME_INSTALLED`.
+Optional vector of strings. Specify extra infixes to the automatic install path. Elements are named after names of .cmake plugin files in the folder `build_install_prefix_plugins`. Each file describes the process of derriving a name of the given dependency. Note, that this setting is purely aestetic, it does not imply any actual dependencies - for those you need to define `declare_dependencies()` function and put them there. Also note, that this setting will get ignored if `INSTALL_PATH` is specified or `ASSUME_INSTALLED`.
 
 #### `COMPONENTS`
 
-Optional vector of strings. Each element of this parameter will get passed to the `find_package` call during the project build run. 
+Optional vector of strings. Each element of this parameter will get passed to the `find_package()` call during the project build run. 
 
 #### `BUILD_PARAMETERS`
 
-Optional vector of strings. Names parameters defined in either `TARGET_PARAMETERS` or `TARGET_FEATURES` to pass to the `ExternalProject_Add` during build. Ignored when `ASSUME_INSTALLED`. If missing, all parameters from `TARGET_PARAMETERS` and `TARGET_FEATURES` will be forwarded to the external project.
+Optional vector of strings. Names parameters defined in either `TARGET_PARAMETERS` or `TARGET_FEATURES` to pass to the `ExternalProject_Add()` during build. Ignored when `ASSUME_INSTALLED`. If missing, all parameters from `TARGET_PARAMETERS` and `TARGET_FEATURES` will be forwarded to the external project.
 
-#### LINK_TO_DEPENDEE
+#### `LINK_TO_DEPENDEE`
 
 Flag makes sense only if the tempalate generates targets and they are not of the type `UTILITY`. If the flag is set, the Beetroot will always call `target_link_libraries()`, even if the function `apply_dependency_to_target()` is defined. The call to `target_link_libraries()` will be placed _after_ the call of the `apply_dependency_to_target()`. 
 
