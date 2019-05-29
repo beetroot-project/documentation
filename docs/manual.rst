@@ -28,7 +28,9 @@ Use any of these functions to import any kind of parameters as any other kind of
 
 ### apply_dependency_to_target()
 
-Optional function that is called in Project build everytime, when there is an internal dependee that requires this template. The file is called after both targets are defined. Function gets two positional arguments: first is the dependee target name (the target that needs us), and the second is the name of our target, even if our template does not define targets (in case the file we describe allows only one singleton target, this second argument is always fixed to our target name).
+Optional function that is called in Project build everytime, when there is an internal dependee that requires this template. The file is called after both targets are defined. Function gets two positional arguments: first is the dependee target name (the target that needs us), and the second is the name of our target, even if our template does not define targets (in case the file we describe allows only one singleton target, this second argument is always fixed to our target name). 
+
+When user decides to implement this function and there are targets defined in `targets.cmake` (usually there are), he is required to put either `LINK_TO_DEPENDEE` or `DONT_LINK_TO_DEPENDEE` to specify whether he wishes Beetroot to link or not the target to the dependee.
 
 The function role is to apply extra modifications to the dependee, and finaly to call (or not) `target_link_libraries(${DEPENDEE_TARGET_NAME} ${KEYWORD} ${TARGET_NAME})`, where `DEPENDEE_TARGET_NAME` and `TARGET_NAME` are respectively first and second parameters to the function and `KEYWORD` is defined as either `INTERFACE` or `PRIVATE` depending on whether the `${DEPENDEE_TARGET_NAME}`'s type is `INTERFACE_LIBRARY` or not. 
 
@@ -49,17 +51,19 @@ If the function is not defined, and if the `${DEPENDEE_TARGET_NAME}` is not of t
 
 ### Template global options
 
-All options affect the way all targets defined in the `targets.cmake` get intepreted. 
+All options affect the way all targets defined in the `targets.cmake` get intepreted. Effectively treats targets as all-or-nothing. Does not affect anything if there is only one template/target define in the file.
 
-#### SINGLETON_TARGETS 
+#### `SINGLETON_TARGETS` 
 
 Option. By setting this option we declare that all targets defined in this file can only be defined in one go, all using the same set of target parameters and features. It also forces only one instance of each target and forces the user to declare the targets using `ENUM_TARGETS` rather than `ENUM_TEMPLATES`. 
 
 If there is only one target defined in this file, the only impact of this option is to force use `ENUM_TARGETS` rather than `ENUM_TEMPLATES`. 
 
-#### NO_TARGETS
+The most obvious place to use this option is in `targets.cmake` which describe external project. 
 
-Option. By setting this option we declare that this file does not define any targets at all. Such "no targets" templates still are internally named by their template/target name for resolving the dependencies. The targets will never be built - in fact defining `generate_targets()` function is illegal with this option set, and user must define `apply_dependency_to_target(DEPENDEE_TARGET_NAME OUR_TARGET_NAME)` function instead, that applies whathever there is to apply to already existing dependee, (which will be guaranteed to be the actual target). 
+#### `NO_TARGETS`
+
+By setting this option we declare that this file does not define any targets at all. Such "no targets" templates still are internally named by their template/target name for resolving the dependencies. The targets will never be built - in fact defining `generate_targets()` function is illegal with this option set, and user must define `apply_dependency_to_target(DEPENDEE_TARGET_NAME OUR_TARGET_NAME)` function instead, that applies whathever there is to apply to already existing dependee, (which will be guaranteed to be the actual target). 
 
 Targets declared with `NO_TARGETS` cannot have their own dependency, because it is unknown how to force CMake to respect dependencies with something that is not a target.
 
@@ -67,19 +71,27 @@ Such option is usefull for old-style header only libraries (that do not use `INT
 
 Note that for `NO_TARGETS` files, there is no difference whether a parameter gets declared inside `TARGET_PARAMETERS`, `LINK_PARAMETERS` or `TARGET_FEATURES` block.
 
-#### LANGUAGES
+#### `LANGUAGES`
 
 List of languages required by the targets. User cannot set the languages himself, because `enable_language()` function requires to be run in the global context, while none of the user code is run, except for the CMakeLists.txt. CMake 3.13 supports the following languages: `CXX`, `C`, `CUDA`, `Fortran`, and `ASM`. This option can depend on the parameters.
 
-#### EXPORTED_VARIABLES
+#### `EXPORTED_VARIABLES`
 
 List of variables (`TARGET_PARAMETER`, `LINK_PARAMETER` or `FEATURE`) that can be embedded into the set of variables available when calling `generate_targets()`. These variables and their values will not participate in the definition of the targets' identities and will get instantiated only when calling those two functions. In order to actually use the variable, the dependee must explicitely declare then when defining dependencies.
 
-#### LINK_TO_DEPENDEE
+#### `LINK_TO_DEPENDEE`
 
-Flag makes sense only if the tempalate generates targets and they are not of the type `UTILITY`. If the flag is set, the Beetroot will always call `target_link_libraries()`, even if the function `apply_dependency_to_target()` is defined. The call to `target_link_libraries()` will be placed _after_ the call of the `apply_dependency_to_target()`. 
+If the flag is set, the Beetroot will always internally call `target_link_libraries()` to link this target with the dependee, even if the function `apply_dependency_to_target()` is defined. Specifying this flag when user did not write `apply_dependency_to_target()` is not required, because in this case calling `target_link_libraries()` is the default behavior. This flag excludes `NO_TARGETS`. 
 
-This option has exactly the same meaning as the option of the same name in the external project set, so there is no point in setting them in both places.
+The call to `target_link_libraries()` will be executed _after_ the call of the `apply_dependency_to_target()`. 
+
+This option has exactly the same meaning as the option of the same name in the external project options, so there is no point in setting them in both places.
+
+#### `DONT_LINK_TO_DEPENDEE`
+
+Don't call `target_link_libraries()`, even if `apply_dependency_to_target()` is not defined. This flag is in opposition to LINK_TO_DEPENDEE and excludes it. 
+
+If user wrote `apply_dependency_to_target()` Beetroot requires him to either set LINK_TO_DEPENDEE or DONT_LINK_TO_DEPENDEE to make sure user understands the linking behavior. 
 
 #### GENERATE_TARGETS_INCLUDE_LINKPARS
 

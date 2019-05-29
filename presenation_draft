@@ -1,0 +1,52 @@
+tags: cmake, project building, compiling, tooling, dsl, external projects, superbuild, best practices
+
+Audience: Developers in need to write and maintain complex CMake build system
+
+Abstract:
+
+Open source DSL based on CMake that targets medium to large CMake deployments and developers less experienced in writing CMake code. It helps by nudging users to put their targets definitions and dependency declarations inside CMake functions with clear API interface, so it is clear on what information and components each target depends. In return for these restraints
+
+it does a great deal of semantic checks on the user code,
+allows a lot of flexibility of where and how to put the user CMake code,
+allows building any part of the project from any directory,
+can automatically turn a project into a superbuild if any of the targets are external.
+
+I will explain the most important concepts of the tool, demo the project and answer questions. 
+
+Documentation (still work in progress) https://beetroot.readthedocs.io/en/latest/ 
+Source code http://github.com/beetroot-project/beetroot
+
+Outline:
+
+1. A quick reminder about the problems with CMake:
+a) Most variables are global 
+b) It is difficult to define function formal parameters (and this system can break in presence of array arguments)
+c) Usually impossible to build only a part of our code unless we specifically program for functionality
+d) superbuilds are not trivial to pull off.
+e) handling information passing between the various parts of the build system can be messy
+
+2. The original idea about the solution
+Let's try to build a system where the user defines the targets in separate functions with formal and well-defined parameters and declared dependencies (functions have a local scope).
+
+3. The system grew over several complete re-writes to arrive with the following main design decisions. Understanding those decisions is key for understanding the tool:
+
+a) Leave most of the action out of CMakeLists.txt - let them only name the targets to build with their arguments (needed, because we need to parse the code twice and CMakeLists are not suited for re-parsing)
+b) Instead, describe the targets in the separate CMake files, that can be unambiguously found either by name (`targets.cmake`) or by the directory (`targets`), inside user-provided function `generate_targets()`.
+c) Identify the user code describing the targets by the targets' names rather than by path. (so it is much easier to refactor directory structure without breaking the build. Scanning for targets' location turned out to be surprisingly fast)
+d) Instantiating two targets with different sets of parameters results in two separate build targets with unique names assigned by the library. This implies that the target name is not known for the user unless he opts out of this behavior (see: singleton targets). By default the user-provided `define_targets()` is a template for creating targets and perhaps `targets.cmake` should be called `templates.cmake`. 
+e) Discovering dependencies between the targets is done separately and before actually parsing functions that define them. This allows for really nice handling of singleton templates, i.e. templates that instantiate only one target (e.g. external projects). In short, this functionality allows us to say something in effect of "our target depends on the library foo with-whatever-options-the-other-part-of-my-project-wants, but it must have feature A". CMake will automatically scan all the declared targets of our project in search of foo, check if the foo is compatible with feature A, and if it is - makes sure the feature is set. 
+ 
+4. Show the basic syntax of the basic block of the system - the `targets.cmake` file
+
+(show one of the examples from the documentation)
+
+5. Incrementally demo growing the project, adding external dependencies, all three kinds of parameters, how to handle code generators, etc. - if time permits.
+
+
+Comments:
+
+1. At this moment the project in the alpha stage in a sense that I am not confident its API, i.e. the keywords and function names will stay as they are now. 
+2. Since the presentation is not going to be a workshop, I would like your help on what use cases I should focus (and perhaps even skip some key features). By default, I will focus on our use case, which may not be representative to your community. 
+3. I believe that experienced developers are less likely to like this tool because they most probably have their own habits of using the CMake, so perhaps I should limit the expertise level of the target audience? OTOH I would really like to have feedback from the CMake experts.
+4. I am open to longer session lengths if you think the audience will be interested in more details. 
+5. What sort of biography do you think I should write? What it will be used for? I never cared about the biography of speakers unless it is somehow relevant to the work they present. In the case of my presentation, I believe the only relevant information about me is my affiliation, which is already included.
