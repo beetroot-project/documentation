@@ -9,9 +9,9 @@ Setting up simply means making the code of the beetroot somehow available to the
 
 Perhaps the simplest way to incorporate the Beetroot into your project is to either clone it into a projects' subdirectory or make it a submodule if you already use git. 
 
+We will now go through some tutorial build cases, which can also be found in the ``examples`` repository.
 
-
-The simplest Hello World
+The simplest Hello World (``01_simplest_hello``)
 ^^^^^^^^^^^^^^^
 
 We will to start small, with the very simple C++ CMake build. 
@@ -129,7 +129,7 @@ We compile it as usual::
    $ ./hello_simple
    Hello World!
 
-The Hello World with parameter
+The Hello World with parameter (``02_parameter_hello``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
@@ -186,8 +186,8 @@ After we build, we should get three executables: ``hello_simple1``, ``hello_simp
 
 The ``targets.cmake`` defines a target _template_, that can be used to define as many targets, as there are unique combinations of target parameters. That is why the ``generate_targets()`` function requires user to use ``${TARGET_NAME}`` instead of hard-coded name, that is usual in standard CMake practice. The function will be called exactly once for each distinct ``${TARGET_NAME}`` that Beetroot found is required to satisfy the parameters.
 
-Targets composed from components
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Targets composed from components (``03_subprojects_basics``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Here you will learn how to combine targets together and use more realistic folder structure.
 
 Suppose we have a program, that requires a function ``get_string`` from a library to run. The `hello_with_lib.cpp`::
@@ -313,11 +313,68 @@ The location of the ``CMakeLists.txt`` is irrelevant in the Beetroot. You can as
 
 All we did aws a change to the directory of the beetroot library in the second line.
 
-Code generators
+Forwarding parameters from dependencies (``04_subproject_pars``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the real life you will often find yourself putting many parametrized customizations to the components that play the role of the libraries in your project. Many of those parameters you would want to expose as customizations in the target executable - sort of forwarding those parameters from dependency to the dependee. Without an extra support for this common pattern, you would need to define again all the forwarded parameters in the body of dependee, and be carefull to match the type and container class to avoid configure errors.
+
+To address this specific problem there are three functions: 
+* ``include_target_parameters_of()`` to forward parameters,
+* ``include_link_parameters_of()`` to forward link parameters, and
+* ``include_features_of()`` to forward features (we will talk about them later).
+
+Finally there is a universal function ``include_target_parameters_univ()`` that incorporates functionality of all those three functions in one place.
+
+The function call must be placed in the body of the ``targets.cmake``, outside of the body of any function defined there, just along the place where you would normally define parameters.
+
+The syntax is ``include_target_parameters_univ( <TEMPLATE_NAME> TARGET_PARAMETERS|LINK_PARAMETERS|TARGET_FEATURES [NONRECURSIVE] [SOURCE TARGET_PARAMETERS|LINK_PARAMETERS|TARGET_FEATURES] [ALL_EXCEPT <list of parameters>] [INCLUDE_ONLY <list of parameters>])``
+
+The function imports the parameters from the specified template and acts as if you would copy-pasted them manually reducing code deduplication and ensuring consistency. 
+
+For better consistency user can choose whether to pick the names of imported parameter himself or to import all except the blacklisted names.
+
+In the latter case, functions are capable of mass-importing all parameters (with exception of those in ``ALL_EXCEPT``) from the single template. Since that template itself can use these functions to forward parameters from its dependencies, the amount of parameters can potentially get massive. In order to better control this situation, they offer ``NONRECURSIVE`` flag, that prevents it from importing the forwarded parameters.
+
+The example ``04_subproject_pars`` is exactly the same with the exception of adding 
+
+   include_target_parameters_of(LIBHELLO
+   	INCLUDE_ONLY
+   		WHO
+   )
+
+to the ``hello_with_lib/targets.cmake``, so it reads like this:
+
+   set(ENUM_TEMPLATES HELLO_WITH_LIB)
+   
+   include_target_parameters_of(LIBHELLO
+   	INCLUDE_ONLY
+   		WHO
+   ) #Implicitly imports (forwards) only WHO. 
+   
+   function(declare_dependencies TEMPLATE_NAME)
+      build_target(LIBHELLO WHO "Saturn")
+   endfunction()
+   
+   function(generate_targets TEMPLATE_NAME)
+      add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/hello_with_lib.cpp")
+      target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}") # ${WHO} is now available and can be used as a compile option
+   endfunction()
+
+
+Code generators (``05_codegen``)
 ^^^^^^^^^^^^^^^
 
+From the Beetroot point of view, code generators are targets that require special linking action - "linking" with the generated source file means adding additional source to the dependee using ``target_sources()`` CMake function.
 
-Let's step up our example and require that the ``HELLO_WITH_LIB`` is also parametrized by the parameter ``WHO``. There are two ways to do it. The most obvious one is simply to add the ``set(TARGET_PARAMETERS WHO SCALAR STRING "Jupiter")`` to the ``hello_with_lib/targets.cmake`` but that would lead to code duplication which will not scale, if there are many parameters in question and they change. The better solution is to import the parameters using the special function designed for this purpose.
+Let us implement a code simple code generator that uses ``configure_file()``. If this example may look too simple to be realistic, remember that the Beetroot does not replace common CMake idioms regarding low-level file handling. The example can as well use ``add_custom_command()`` instead. Or it may even generate code during the configure phase (important when you do not know the names of the generated files before you actually generate them. In that case you would need to call the code generator via ``execute_process()`` and gather the resulted files by the means of file globbing). 
+
+Imagine the ``src.cpp.in``:
+
+   const char* getVersion()
+   {
+       return "@MyProj_VERSION@";
+   }
+
 
 This is the definition of the ``hello_with_lib/targets.cmake``::
 
@@ -377,7 +434,9 @@ The Beetroot treats the target as external if the template file sets non-empty c
 Non-compiled components (e.g. header libraries)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Imagine, that the ``hello_with_lib`` is also responsible for setting a macro variable in the client's code. Let's predend that this variable modifies behaviour of the header-only part of this library. Consequently will not change the library code. We only need to make sure, that clients linking to our library receive a new preprocessor macro::
+In the CMake, there are two ways of implementing the header-only libraries: the old, deprecated method that involves using ``target_include_directories()`` on the dependee target (target that is needs to use the library) or the current best-practise method that involves defining the target with only "interface" properties. Let's start with the modern way first:
+
+Imagine, that the ``hello_with_lib`` is also responsible for setting a macro variable in the client's code. Let's predend that this variable modifies behavior of the header-only part of this library. Consequently will not change the library code. We only need to make sure, that clients linking to our library receive a new preprocessor macro::
 
    set(ENUM_TEMPLATES LIBHELLO)
    
@@ -389,14 +448,6 @@ Imagine, that the ``hello_with_lib`` is also responsible for setting a macro var
       LIBPAR	INTEGER	
    )
    
-   function(generate_targets TEMPLATE_NAME)
-      add_library(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/source/libhello.cpp")
-      add_source(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/libhello.h") #For better IDE integration
-      
-      target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-      target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}")
-   endfunction()
-
    function(apply_dependency_to_target DEPENDEE_TARGET_NAME OUR_TARGET_NAME)
       target_compile_definitions(${DEPENDEE_TARGET_NAME} PRIVATE "LIBPAR=${LIBPAR}")
    endfunction()

@@ -31,7 +31,7 @@ Inside the ``targets.cmake`` you need to separate the code into two groups and p
 
 #. The code that mentions the dependee. If it is just a call to the ``target_link_libraries(DEPENDEE_TARGET OUR_TARGET)`` you can simply remove it, since Beetroot would call it by itself. If it involves something more unusual, like calls to ``add_custom_command()`` and  ``target_sources()`` (common pattern when you have a code generator) - put that code into an ``apply_dependency_to_target()``. 
 
- 
+The last thing to remember, is to always put absolute paths to whatever files you ever mention. A common pattern is to use either ``CMAKE_CURRENT_SOURCE_DIR`` or ``SUPERBUILD_ROOT`` variables for this purpose.
  
 Is there any unexpected way the Beetroot can interefere with my own CMake code?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
