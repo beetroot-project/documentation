@@ -67,7 +67,7 @@ One of the base features of the Beetroot is the ability to build several copies 
 Because one-to-one relationship between an instance and a target is common, it will be later on depicted with a common box like this:
 
 .. image:: 2TARGETS_2INSTANCES_compact.png
-  :width: 400
+  :width: 700
   :alt: Compact (and default) version of the build tree of `build_target(MYTARGET PAR 42); build_target(MYTARGET)`. Orange is `FEATUREBASE` with first title row showing target name and its internal ID. Blue is `INSTANCE` with title row showing its internal ID.
 
 Dependencies between targets are realized as directed links between `INSTANCES`, like this:
