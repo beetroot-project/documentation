@@ -37,8 +37,9 @@ If user requires two targets but the only way they differ is through the link pa
 build_target(MYTARGET)
 build_target(MYTARGET MYLINKPAR other)
 ```
+
 .. image:: 1TARGET_2INSTANCES.png
-  :width: 400
+  :width: 700
   :alt: Build tree of `build_target(MYTARGET MYLINKPAR other); build_target(MYTARGET)`. Orange is `FEATUREBASE` with first title row showing target name and its internal ID. Blue is `INSTANCE` with title row showing its internal ID.
 
 
@@ -53,7 +54,7 @@ build_target(MYTARGET PAR 42)
 ```
 
 .. image:: 2TARGETS_2INSTANCES.png
-  :width: 400
+  :width: 700
   :alt: Build tree of `build_target(MYTARGET PAR 42); build_target(MYTARGET)`. Orange is `FEATUREBASE` with first title row showing target name and its internal ID. Blue is `INSTANCE` with title row showing its internal ID.
 
 Because one-to-one relationship between an instance and a target is common, it will be later on depicted with a common box like this:
@@ -66,11 +67,11 @@ Dependencies between targets are realized as directed links between `INSTANCES`,
 
 
 .. image:: DEPENDENCY.png
-  :width: 400
+  :width: 700
   :alt: Build tree of `MYEXEC` that depends on `MYLIB`. The dependency relation is always realized between `INSTANCES`, not `FEATUREBASES`.
 
 .. image:: DEPENDENCY_compact.png
-  :width: 400
+  :width: 700
   :alt: Compact view of a tree where `MYEXEC` depends on `MYLIB`.
 
 
