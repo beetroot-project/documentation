@@ -129,23 +129,6 @@ We compile it as usual::
    $ ./hello_simple
    Hello World!
 
-
-Beetroot has built-in dependency graph generator in the dot language. This simples project can be visualized as 
-
-.. image:: 01_simplest_hello.png
-  :width: 700
-  :alt: Build tree of `build_target(HELLO_SIMPLE)`. Orange is `FEATUREBASE` with first title row showing target name and its internal ID. Blue is `INSTANCE` with title row showing its internal ID.
-
-There are minimum two types of object directly involved when building even the simplest of projects: `INSTANCE` and `FEATUREBASE`. If the user code actually produce a CMake target, then `FEATUREBASE` is a proxy class to it (with one-to-one relationship if user code define a new target), whereas `INSTANCE` also encapsulates the linking information - how should the dependency influence the callee. 
-
-Because it is very common case that there is one-to-one relationship between the `FEATUREBASE` and the `INSTANCE` - i.e. between the target and the place it is defined (as always the case in plaine CMake), the former diagram is simplified to this:
-
-.. image:: 01_simplest_hello_compact.png
-  :width: 700
-  :alt: Compacted build tree of `build_target(HELLO_SIMPLE)`. Orange is `FEATUREBASE` with first title row showing target name and its internal ID. Blue is `INSTANCE` with title row showing its internal ID.
-  
-
-
 The Hello World with parameter (``02_parameter_hello``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -25,10 +25,23 @@ Beetroot data model
 
 Since you, the reader, is most probably a seasoned programmer, I believe the most straightforward way of introducing you to the Beetroot is through data model.
 
-CMake (among other things) maintain internally an object for each defined target, and at the glance, the Beetroot's equivalent to the CMake target is a "`FEATUREBASE`" object class [1]. One target definition file can define multiple FeatureBase objects, because user can put several names in the `ENUM_TEMPLATES`. 
+CMake (among other things) maintain internally an object for each defined target, and at the glance, the Beetroot's equivalent to the CMake target is a "`FEATUREBASE`" object class [1]. `FEATUREBASE` also gets constructed if the user's code does not result in CMake targets (because e.g. it only modifies existing target). Also note that one target definition file (`targets.cmake`) can define multiple FeatureBase objects, because user can put several names in the `ENUM_TEMPLATES` stanza. 
 
 Each invocation of a function the requires a build of the target (e.g. `build_target()` or `get_existing_target()`) is internally represented by the object of the type "`INSTANCE`". In Beetroot INSTANCE and FEATUREBASE have one-to-many relationship; each INSTANCE is matched with a single FEATUREBASE, but a single FEATUREBASE may by linked to several INSTANCES.
 
+In plain CMake, this duality does not exist, the sequence of calls `add_library(foo ...)` and `target_link_libraries(myexec PRIVATE foo)` mean in simple English "build a library `foo`, and then make `myexec` depend on it". The `mytarget` alwyas gets defined or an error produced. On the other hand, in Beetroot one may express dependency relationship as "I need a library foo with a param `FLAG`". This would result in a new copy of library `foo` only if it has not been defined alsewhere with the sole param `FLAG`. It would be more equivalent to the 
+
+
+```
+if(NOT TARGET foo)
+	add_library(foo ...)
+endif()
+target_link_libraries(myexec PRIVATE foo)
+```
+
+except that such code can be dangerous, if we may not be sure with what options the `foo` was built. Beetroot takes care of that, by matching all the parameters `...` between the pre-existing `foo` and the `foo` definition.
+
+Beetroot also allows for more advanced dependency statement, expressed as "I need whatever library `foo` the project already comes with. Just make sure that among other parameters, it is compiled with a feature indicated by the param FLAG on". In that case Beetroot would gather all requested versions of the library `foo`, decide which are compatible with the specification, then decide if the feature `FLAG` can be added. If not - build a separate copy of `foo`.
 
 If user requires two targets but the only way they differ is through the link parameters, than it is not required to actually build two copies of them and in such case each `INSTANCE` link to the same `FEATUREBASE`:
 

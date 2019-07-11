@@ -16,8 +16,8 @@ The Beetroot Project's documentation
    :maxdepth: 2
    :caption: Contents:
 
-   about
-   start
+   about/about
+   start/start
    features
 
 
