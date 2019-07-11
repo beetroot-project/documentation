@@ -32,12 +32,10 @@ Each invocation of a function the requires a build of the target (e.g. `build_ta
 In plain CMake, this duality does not exist, the sequence of calls `add_library(foo ...)` and `target_link_libraries(myexec PRIVATE foo)` mean in simple English "build a library `foo`, and then make `myexec` depend on it". The `mytarget` alwyas gets defined or an error produced. On the other hand, in Beetroot one may express dependency relationship as "I need a library foo with a param `FLAG`". This would result in a new copy of library `foo` only if it has not been defined alsewhere with the sole param `FLAG`. It would be more equivalent to the 
 
 
-```
-if(NOT TARGET foo)
-	add_library(foo ...)
-endif()
-target_link_libraries(myexec PRIVATE foo)
-```
+   if(NOT TARGET foo)
+   	add_library(foo ...)
+   endif()
+   target_link_libraries(myexec PRIVATE foo)
 
 except that such code can be dangerous, if we may not be sure with what options the `foo` was built. Beetroot takes care of that, by matching all the parameters `...` between the pre-existing `foo` and the `foo` definition.
 
@@ -46,10 +44,8 @@ Beetroot also allows for more advanced dependency statement, expressed as "I nee
 If user requires two targets but the only way they differ is through the link parameters, than it is not required to actually build two copies of them and in such case each `INSTANCE` link to the same `FEATUREBASE`:
 
 
-```CMake
-build_target(MYTARGET)
-build_target(MYTARGET MYLINKPAR other)
-```
+   build_target(MYTARGET)
+   build_target(MYTARGET MYLINKPAR other)
 
 .. image:: 1TARGET_2INSTANCES.png
   :width: 700
@@ -60,11 +56,9 @@ build_target(MYTARGET MYLINKPAR other)
 One of the base features of the Beetroot is the ability to build several copies of a target, by simply requiring it with different parameters. If such requirements are mutually incompatible (as is always the case if target parameters differ, but usually not if the features differ, and never with link parameters) than Beetroot will decide to instantiate two distinct FEATUREBASE (and CMake targets) and we will end up with 
 
 
+   build_target(MYTARGET)
+   build_target(MYTARGET PAR 42)
 
-```CMake
-build_target(MYTARGET)
-build_target(MYTARGET PAR 42)
-```
 
 .. image:: 2TARGETS_2INSTANCES.png
   :width: 700
