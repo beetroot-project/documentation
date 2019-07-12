@@ -203,6 +203,11 @@ After we build, we should get three executables: ``hello_simple1``, ``hello_simp
 
 The ``targets.cmake`` defines a target _template_, that can be used to define as many targets, as there are unique combinations of target parameters. That is why the ``generate_targets()`` function requires user to use ``${TARGET_NAME}`` instead of hard-coded name, that is usual in standard CMake practice. The function will be called exactly once for each distinct ``${TARGET_NAME}`` that Beetroot found is required to satisfy the parameters.
 
+.. image:: 02_parameter_hello.png
+  :width: 700
+  :alt: Build tree representation of three versions of `HELLO_SIMPLE`. 
+
+
 Targets composed from components (``03_subprojects_basics``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Here you will learn how to combine targets together and use more realistic folder structure.
@@ -330,6 +335,11 @@ The location of the ``CMakeLists.txt`` is irrelevant in the Beetroot. You can as
 
 All we did aws a change to the directory of the beetroot library in the second line.
 
+.. image:: 03_subprojects_basic.png
+  :width: 700
+  :alt: Build tree representation of `HELLO_WITH_LIB`. Dependencies are displayed below the dependee, with arrow pointing to them.
+
+
 Forwarding parameters from dependencies (``04_subproject_pars``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -376,6 +386,12 @@ to the ``hello_with_lib/targets.cmake``, so it reads like this:
       add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/hello_with_lib.cpp")
       target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}") # ${WHO} is now available and can be used as a compile option
    endfunction()
+   
+
+.. image:: 04_subproject_pars.png
+  :width: 700
+  :alt: Build tree representation of `HELLO_WITH_LIB`. Parameters that keep their default value are not displayed.
+
 
 
 Code generators (``05_codegen``)
