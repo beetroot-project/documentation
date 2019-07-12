@@ -132,7 +132,7 @@ We compile it as usual::
 
 Beetroot has built-in dependency graph generator in the dot language. This simples project can be visualized as 
 
-.. image:: simplest_hello.png
+.. image:: 01_simplest_hello.png
   :width: 700
   :alt: Build tree of `build_target(HELLO_SIMPLE)`. Orange is `FEATUREBASE` with first title row showing target name and its internal ID. Blue is `INSTANCE` with title row showing its internal ID.
 
