@@ -20,6 +20,28 @@ Steps to start using the Beetroot:
 #. Write target description files (either ``targets.cmake`` anywhere in the project tree, or any file with the extension ``.cmake`` in the subdirectory ``cmake/targets`` anywhere in the project tree.
 #. Refer to the target you want to build inside the ``CMakeLists.txt`` by function ``build_target(<TEMPLATE_NAME> [<ARGUMENTS>])``
 
+
+
+Why Beetroot?
+^^^^^^^^^^^^^
+
+There are many CMake projects that superficially look similar in scope to us. Beetroot is unique in that it aims to replace/deprecate as little of the native CMake commands and idioms as possible, while delivering modern (if not experimental) approach to the build. 
+
+Here is a list of known to me at the time of writing conversion projects with its own description.
+
+* https://github.com/ecmwf/ecbuild - A CMake-based build system, consisting of a collection of CMake macros and functions that ease the managing of software build systems
+* https://github.com/DevSolar/jaws - Just A Working Setup.
+
+All these projects are "total conversion mods" for CMake - they replace/reimplement bulk of the CMake functions. In order to use them, you need to learn many new commands with their parameters. Although the new systems are arguably better, you still, as a user, will inevitably learn the standard CMake commands anaway. That will happen either from necessity, because your use case was not forseen and you had to implement it in "bare" CMake, or the standard commands are better documented & supported. This may lead to the situation, contrary to the projects' claims, that using the mentioned systems would lead to the situation that requires you to actually learn more CMake, not less[#fs1]_ . 
+
+When implementing you project in Beetroot you will use most of the CMake commands as you did before. In particular, you still use ``add_library()``, ``add_executable()`` and ``add_custom_target()`` to define your targets. You will access and set the targets' properites with usual ``target_compile_definitions()``, ``target_compile_options()``, ``target_include_directories()`` and even ``target_sources()``. You may use ``target_link_libraries()`` or you may defer to the Beetroot calling it automatically for you. You may use ``ExternalProject`` and ``find_package()`` or you may use the Beetroot's built-in system of handling them. The only command that is deprecated is ``add_subdirectory()`` - it is replaced with a far more controllable and less error-prone mechanism that is used to resolve information-dependency on the various parts of the CMake project.
+
+
+.. [#fs1] For a humoristic view on this phenomenon take a look at this brilliant XKCD comic strip: https://xkcd.com/927/
+
+There list will not be complete without the mention of the Artichoke: https://github.com/commontk/Artichoke - "CMake module allowing to easily create a build system on top of ExternalProjects." The project adheres to the "do one thing, but do it well" Unix principle, and should be, at least partially, compatible with the Beetroot.
+
+
 Beetroot data model
 ===================
 
