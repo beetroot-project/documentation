@@ -4,8 +4,8 @@ Getting started
 Set up the beetroot
 ^^^^^^^^^^^^^^^^^^^
 
-Setting up simply means making the code of the beetroot somehow available to the CMake building process and making sure the Beetroot knows where is our superbuild root. The first part is as simple, as including the ``beetroot.cmake`` in the beginning of the  ``CMakeLists.txt``. To specify the root directory of you project you can either set it yourself using ``set(SUPERBUILD_ROOT <path>)`` *before* including the Beetroot, or relying on the Beetroots' heuristics that assume that the root directory is the topmost directory relative to the ``CMakeLists.txt`` project that contains ``CMakeLists.txt``[1]_ . 
-.. [1] Beetroot tries to find superproject root using the following algorithm: The root directory is assumed to be the first directory containing ``CMakeLists.txt`` that is followed by two immidiate parent directories that are either without this file, or are a root of the filesystem. 
+Setting up simply means making the code of the beetroot somehow available to the CMake building process and making sure the Beetroot knows where is our superbuild root. The first part is as simple, as including the ``beetroot.cmake`` in the beginning of the  ``CMakeLists.txt``. To specify the root directory of you project you can either set it yourself using ``set(SUPERBUILD_ROOT <path>)`` *before* including the Beetroot, or relying on the Beetroots' heuristics that assume that the root directory is the topmost directory relative to the ``CMakeLists.txt`` project that contains ``CMakeLists.txt``[#f1]__ .
+.. [#f1] Beetroot tries to find superproject root using the following algorithm: The root directory is assumed to be the first directory containing ``CMakeLists.txt`` that is followed by two immidiate parent directories that are either without this file, or are a root of the filesystem.
 
 Perhaps the simplest way to incorporate the Beetroot into your project is to either clone it into a projects' subdirectory or make it a submodule if you already use git. 
 
@@ -394,59 +394,94 @@ to the ``hello_with_lib/targets.cmake``, so it reads like this:
 
 
 
-Code generators (``05_codegen``)
+Code generators, known generated files (``05_codegen_known``)
 ^^^^^^^^^^^^^^^
 
-From the Beetroot point of view, code generators are targets that require special linking action - "linking" with the generated source file means adding additional source to the dependee using ``target_sources()`` CMake function.
+From the Beetroot point of view, code generators are targets that add a source file to the parent (dependee) taret. Actions that happen after the target (the source code) was build are called _link time actions_, and they usually apply special attributes to the dependee. In this particular case we need to add the generated file as a source to the dependee using ``target_sources()`` CMake function [#f2]_ .
 
-Let us implement a code simple code generator that uses ``configure_file()``. If this example may look too simple to be realistic, remember that the Beetroot does not replace common CMake idioms regarding low-level file handling. The example can as well use ``add_custom_command()`` instead. Or it may even generate code during the configure phase (important when you do not know the names of the generated files before you actually generate them. In that case you would need to call the code generator via ``execute_process()`` and gather the resulted files by the means of file globbing). 
+Let us implement a simple code generator that uses ``configure_file()``. If this example may look too simple to be realistic, remember that the Beetroot does not replace common CMake idioms regarding low-level file handling. The example can as well use ``add_custom_command()`` instead.
 
-Imagine the ``src.cpp.in``:
+.. [#f2] Note, that this approach assumes the names of the generated files are not known beforehand. In such case you would need to call the code generator in ``apply_dependency_to_target()`` during the configure phase via ``execute_process()`` and gather the resulted files by the means of file globbing or ``OUTPUT_VARIABLE`` option.
 
-   const char* getVersion()
+Imagine we have the following stub code generator, written in Python, in ``lib_gen/generator.py``:
+
+
+   import argparse
+
+   parser = argparse.ArgumentParser()
+   parser.add_argument("-o", "--output", help="output file")
+   parser.add_argument("-s", "--string", help="debug string")
+   args=parser.parse_args()
+
+   print("""const char* getString()
    {
-       return "@MyProj_VERSION@";
-   }
+      return "my generated string: """ + args.string + """";
+   }""", file=open(args.output+".cpp", "w"))
 
+   print("const char* getString();", file=open(args.output+".h", "w"))
 
-This is the definition of the ``hello_with_lib/targets.cmake``::
+All it does is generating two files: ``<output>.cpp`` and ``<output>.h`` in the current directory. Let's write the CMake code that drives the code generation:
 
-   set(ENUM_TEMPLATES HELLO_WITH_LIB)
-   
-   include_target_parameters_of(LIBHELLO
-   	INCLUDE_ONLY
-   		WHO
-   ) #Implicitly imports only WHO. See API reference to learn about all the options
-   
-   function(declare_dependencies TEMPLATE_NAME)
-      build_target(LIBHELLO WHO "Saturn")
+Contents of the ``lib_gen/targets.cmake``:
+
+   set(ENUM_TEMPLATES CODEGEN1_GEN)
+
+   set(TARGET_PARAMETERS 
+      SOURCE_OUT	SCALAR	PATH "generated_source"
+   )
+
+   set(TEMPLATE_OPTIONS NO_TARGETS)
+
+   function(apply_dependency_to_target DEPENDEE_TARGET_NAME OUR_TARGET_NAME)
+      get_target_property(DEPENDEE_BINARY_DIR ${DEPENDEE_TARGET_NAME} BINARY_DIR)
+      #Not used here, but kept as a code reference:
+      get_target_property(DEPENDEE_SOURCE_DIR ${DEPENDEE_TARGET_NAME} SOURCE_DIR)
+      
+      find_package(Python3 COMPONENTS Interpreter REQUIRED)
+      set(Python_EXECUTABLE "${Python3_EXECUTABLE}")
+
+      add_custom_command(
+         OUTPUT "${DEPENDEE_BINARY_DIR}/${SOURCE_OUT}.cpp"
+         COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/generator.py -o ${SOURCE_OUT} -s "Hello!"
+         WORKING_DIRECTORY ${DEPENDEE_BINARY_DIR}
+         COMMENT "Generating file ${SOURCE_OUT}..."
+         VERBATIM
+      )
+      target_include_directories(${DEPENDEE_TARGET_NAME} PRIVATE ${DEPENDEE_BINARY_DIR})
+      target_sources(${DEPENDEE_TARGET_NAME} ${KEYWORD} ${SOURCE_OUT}.cpp)
    endfunction()
-   
-   function(generate_targets TEMPLATE_NAME)
-      add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/hello_with_lib.cpp")
-      target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}") # ${WHO} is now available
-   endfunction()
 
+We call the template ``CODEGEN1_GEN``, export the filename as a parameter. Then we instruct the Beetroot that this template will not generate targets with setting the flag ``NO_TARGETS``[#f3]_ .
 
-Subcomponents that influence the parent
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. [#f3] Although the Beetroot *could* figure out on its own, that the code does not generate targets, because the ``generate_targets()`` function is missing, it requires user to be **explicit** with this intention. The reason is that user can easily misspell the name of the ``generate_targets()`` function in his template file, and CMake does not support enforcing interfaces, so there is really no way to catch such case otherwise.
 
-When we require the subcomponent in function ``declare_dependencies`` we have a total control of all the information (i.e. parameters) the component receive. But what if we want the component to influence the build process of the parent project as well? Imagine this simple logging example - we want to include logging support to our application by 
-
-TODO: Find a good case (better than target_compile_definitions with log or target_include_directories for header libraries)
-
-We have seen in `The Hello World with parameter`_ that for each unique variation of the parameters of the compoment Beetroot defines a distinct target. That is a welcome feature if the parameter modifies the compilation process of the component, but what if we need to parametrize *linking*?
-
+The client C++ code that uses the generated library, nothing special here (``codegen_client/codegen1_client.cpp``):
 
    #include <iostream>
-   #include <boost/log/trivial.hpp>
+   #include "my_generated_source.h"
 
-   int main(int, char*[])
+   int main()
    {
-       BOOST_LOG_TRIVIAL(info) << “This is an informational severity message”;
-       std::cin.get();
-       return 0;
+   std::cout << "Hello "<< getString()<<"!"<< std::endl;
+   return 0;
    }
+
+The best part is how we build the client (the executable): we just add a single dependency line! (``codegen_client/targets.cmake``):
+
+
+   set(ENUM_TEMPLATES CODEGEN1_CLIENT)
+
+   function(declare_dependencies TEMPLATE_NAME)
+      build_target(CODEGEN1_GEN SOURCE_OUT my_generated_source)
+   endfunction()
+
+   function(generate_targets TARGET_NAME TEMPLATE_NAME)
+      add_executable(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/codegen1_client.cpp")
+   endfunction()
+
+.. image:: 05_codegen1_client.png
+  :width: 700
+  :alt: Build tree representation of `CODEGEN1_CLIENT`. The library is written in square brackets to indicate that it does not produce any targets.
 
 
 External projects and the superbuild idiom
@@ -485,4 +520,23 @@ Imagine, that the ``hello_with_lib`` is also responsible for setting a macro var
       target_compile_definitions(${DEPENDEE_TARGET_NAME} PRIVATE "LIBPAR=${LIBPAR}")
    endfunction()
 
+Subcomponents that influence the parent
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When we require the subcomponent in function ``declare_dependencies`` we have a total control of all the information (i.e. parameters) the component receive. But what if we want the component to influence the build process of the parent project as well? Imagine this simple logging example - we want to include logging support to our application by 
+
+TODO: Find a good case (better than target_compile_definitions with log or target_include_directories for header libraries)
+
+We have seen in `The Hello World with parameter`_ that for each unique variation of the parameters of the compoment Beetroot defines a distinct target. That is a welcome feature if the parameter modifies the compilation process of the component, but what if we need to parametrize *linking*?
+
+
+   #include <iostream>
+   #include <boost/log/trivial.hpp>
+
+   int main(int, char*[])
+   {
+       BOOST_LOG_TRIVIAL(info) << “This is an informational severity message”;
+       std::cin.get();
+       return 0;
+   }
 
