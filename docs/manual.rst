@@ -12,18 +12,18 @@ By default the `apply_dependency_to_target()` is defined as a call to `target_li
 
 All those functions are parametrized by the three categories of variables, which share the same namespace. 
 
-* `TARGET_PARAMETERS` list all the variables that define the identity of all the defined targets. If user tries to instatiate our template twice with different set of target parameters, he will get either two distinct targets (named with ordinal sufix, e.g. mylib1 and mylib2) or an error if we declare that there can be only one copy of each target. 
+* `BUILD_PARAMETERS` list all the variables that define the identity of all the defined targets. If user tries to instatiate our template twice with different set of target parameters, he will get either two distinct targets (named with ordinal sufix, e.g. mylib1 and mylib2) or an error if we declare that there can be only one copy of each target. 
 * `LINK_PARAMETERS` list additional variables that can be used by the `apply_dependency_to_target()` function during linking to the depndee (if our target is used as a dependency). Those variables does not change the identity of the target, so if user tries to instatiate targets that differ only in link parameters, there will be only one copy of the target built, but it will be linked in different way to the dependees. One can think of it as if those variables are implicitely included in the dependees' indetities.
 * `FEATURES`. Each variable of the list define existence of independent feature. Features are included in the targets' identities. A target that include more features is always compatible with the target that include less of them. Features can be specified using flags (each flag controls a different feature), scalars (value different than the default mean an extra feature) and vectors (each value of the vector is treated as a separate flag). As long as it is possible, beetroot will only instatiate a single copy of the target for each set of target parameters, that is compatible with all the required features. If the features are not compatible with each other (e.g. scalars), beetroot will issue an error.
 
-If you find yourself defining a large list of `TARGET_PARAMETERS` over and over again for different targets (for instance to pass targets from a library to a consumer), you can spare yourself a time and call a function `include_target_parameters_of(TEMPLATE_NAME)` in the targets body (i.e. outside of any functions defined therein) to include all the target parameters defined in that file. The file will be processed in the context just after parsing the targets file, including all declared and non-declared variables defined in this file.
+If you find yourself defining a large list of `BUILD_PARAMETERS` over and over again for different targets (for instance to pass targets from a library to a consumer), you can spare yourself a time and call a function `include_build_parameters_of(TEMPLATE_NAME)` in the targets body (i.e. outside of any functions defined therein) to include all the target parameters defined in that file. The file will be processed in the context just after parsing the targets file, including all declared and non-declared variables defined in this file.
 
-#### include_target_parameters_of, include_features_of and include_link_parameters_of::
+#### include_build_parameters_of, include_build_features_of and include_link_parameters_of::
 
 
 	<function_name>(<TEMPLATE_NAME> [NONRECURSIVE] [SOURCE LINKPARS|LINK_PARAMETERS|PARAMETERS|FEATURES] [ALL_EXCEPT <VAR_NAME>... | INCLUDE_ONLY <VAR_NAME>...])
 
-Use any of these functions to import any kind of parameters as any other kind of parameters. The syntax of this function will change, but at the moment there is no limit on what combinations of types of parameters to convert.  `NONRECURSIVE` mean, that that only the parameters declared directly in the target will get imported. `SOURCE` determines what is the source of the parameters; `LINKPARS` and `LINK_PARAMETERS` are synonims. `TARGET_PARAMETERS` from another template file. Only the variable definitions will be imported, just like if you would paste them into the own `TARGET_PARAMETERS`, not other variables and it will not set a build dependency. If the included file itself includes target parameters, they can be included too. 
+Use any of these functions to import any kind of parameters as any other kind of parameters. The syntax of this function will change, but at the moment there is no limit on what combinations of types of parameters to convert.  `NONRECURSIVE` mean, that that only the parameters declared directly in the target will get imported. `SOURCE` determines what is the source of the parameters; `LINKPARS` and `LINK_PARAMETERS` are synonims. `BUILD_PARAMETERS` from another template file. Only the variable definitions will be imported, just like if you would paste them into the own `BUILD_PARAMETERS`, not other variables and it will not set a build dependency. If the included file itself includes target parameters, they can be included too. 
 
 
 ### apply_dependency_to_target()
@@ -42,7 +42,7 @@ If the function is not defined, and if the `${DEPENDEE_TARGET_NAME}` is not of t
 
 ### List of implicitely defined variables available for generate_targets() and apply_dependency_to_target()
 
-* All variables defined in `TARGET_PARAMETERS` and `TARGET_FEATURES`
+* All variables defined in `BUILD_PARAMETERS` and `BUILD_FEATURES`
 * `apply_dependency_to_target()` can also gets variables defined in `LINK_PARAMETERS`
 * `TARGET_NAME` that names the current target
 * (external projects only in `apply_dependency_to_target`) `INSTALL_PATH` path where the external dependency is already installed
@@ -69,7 +69,7 @@ Targets declared with `NO_TARGETS` cannot have their own dependency, because it 
 
 Such option is usefull for old-style header only libraries (that do not use `INTERFACE` targets) or pieces of CMake code that only produce CMake variables; in such case the relevant code that produces the variables must be placed either in global scope of the `targets.cmake` or inside the `apply_dependency_to_target`. Remember, that only declared variables will be passed to the `apply_dependency_to_target`.
 
-Note that for `NO_TARGETS` files, there is no difference whether a parameter gets declared inside `TARGET_PARAMETERS`, `LINK_PARAMETERS` or `TARGET_FEATURES` block.
+Note that for `NO_TARGETS` files, there is no difference whether a parameter gets declared inside `BUILD_PARAMETERS`, `LINK_PARAMETERS` or `BUILD_FEATURES` block.
 
 #### `LANGUAGES`
 
@@ -129,7 +129,7 @@ Optional vector of strings. Each element of this parameter will get passed to th
 
 #### `BUILD_PARAMETERS`
 
-Optional vector of strings. Names parameters defined in either `TARGET_PARAMETERS` or `TARGET_FEATURES` to pass to the `ExternalProject_Add()` during build. Ignored when `ASSUME_INSTALLED`. If missing, all parameters from `TARGET_PARAMETERS` and `TARGET_FEATURES` will be forwarded to the external project.
+Optional vector of strings. Names parameters defined in either `BUILD_PARAMETERS` or `BUILD_FEATURES` to pass to the `ExternalProject_Add()` during build. Ignored when `ASSUME_INSTALLED`. If missing, all parameters from `BUILD_PARAMETERS` and `BUILD_FEATURES` will be forwarded to the external project.
 
 #### `LINK_TO_DEPENDEE`
 
@@ -148,7 +148,7 @@ Parameters that can be passed to the template (e.g. target) are distinguished by
 Container `OPTION` can hold only variables of the type `BOOL`, and hence the only type allowed for it is either `BOOL` or empty string. It behaves diffently from `BOOL` `SCALAR` only when passed as a parameter via function call. Just like in base CMake, `OPTION` parsing is implemented using `cmake_parse_arguments`, so it does not require a value. E.g. if::
 
 
-	set(TARGET_PARAMETERS
+	set(BUILD_PARAMETERS
 		USE_GPU	OPTION	"" 0
 		USE_CPU	SCALAR	BOOL 0
 	)
@@ -187,7 +187,7 @@ If `SCALAR` is used for feature, the rules for overriding depend on the type:
 For example, suppose we have a template with the following features::
 
 
-	set(TARGET_FEATURES
+	set(BUILD_FEATURES
 		F_VERSION	SCALAR					INTEGER	"14"
 		F_FLAG		SCALAR					BOOL	"YES"
 		F_SOME_PATH	SCALAR					PATH	""
@@ -216,11 +216,11 @@ Integer 23 overrides both 15 and the default value of 14 so, there is no conflic
 `VECTOR` can be used for features, and a set that contains a superset of values can override the smaller set. Example:
 
 ```
-set(TARGET_FEATURES
+set(BUILD_FEATURES
 	COMPONENTS	VECTOR	STRING	"COMP_A;COMP_B"
 )
 
-set(TARGET_PARAMETERS
+set(BUILD_PARAMETERS
 ...
 )
 

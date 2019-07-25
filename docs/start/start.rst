@@ -154,7 +154,7 @@ Now let's start complicating things. You may have noticed, that we have a macro 
 
    set(ENUM_TEMPLATES HELLO_SIMPLE)
    
-   set(TARGET_PARAMETERS 
+   set(BUILD_PARAMETERS 
       WHO SCALAR STRING "Beetroot"
    )
    
@@ -163,7 +163,7 @@ Now let's start complicating things. You may have noticed, that we have a macro 
       target_compile_definitions(${TARGET_NAME} PRIVATE "WHO=${WHO}")
    endfunction()
 
-The name of the parameter does not need to match the name of the preprocessor macro. The formal syntax is this: ``TARGET_PARAMETERS`` is an array organized into 4-element tuples.
+The name of the parameter does not need to match the name of the preprocessor macro. The formal syntax is this: ``BUILD_PARAMETERS`` is an array organized into 4-element tuples.
 
 #. First element of the tuple is the name of the parameter, then
 #. container type. There are three container types: ``OPTIONAL``, ``SCALAR`` and ``VECTOR``, and they correspond to the CMake options, scalars and lists.
@@ -280,7 +280,7 @@ This is the definition of the ``libhello/targets.cmake``::
 
    set(ENUM_TEMPLATES LIBHELLO)
    
-   set(TARGET_PARAMETERS 
+   set(BUILD_PARAMETERS 
       WHO	SCALAR	STRING	"Jupiter"
    )
    
@@ -346,15 +346,15 @@ Forwarding parameters from dependencies (``04_subproject_pars``)
 In the real life you will often find yourself putting many parametrized customizations to the components that play the role of the libraries in your project. Many of those parameters you would want to expose as customizations in the target executable - sort of forwarding those parameters from dependency to the dependee. Without an extra support for this common pattern, you would need to define again all the forwarded parameters in the body of dependee, and be carefull to match the type and container class to avoid configure errors.
 
 To address this specific problem there are three functions: 
-* ``include_target_parameters_of()`` to forward parameters,
+* ``include_build_parameters_of()`` to forward parameters,
 * ``include_link_parameters_of()`` to forward link parameters, and
-* ``include_features_of()`` to forward features (we will talk about them later).
+* ``include_build_features_of()`` to forward features (we will talk about them later).
 
-Finally there is a universal function ``include_target_parameters_univ()`` that incorporates functionality of all those three functions in one place.
+Finally there is a universal function ``include_parameters()`` that incorporates functionality of all those three functions in one place.
 
 The function call must be placed in the body of the ``targets.cmake``, outside of the body of any function defined there, just along the place where you would normally define parameters.
 
-The syntax is ``include_target_parameters_univ( <TEMPLATE_NAME> TARGET_PARAMETERS|LINK_PARAMETERS|TARGET_FEATURES [NONRECURSIVE] [SOURCE TARGET_PARAMETERS|LINK_PARAMETERS|TARGET_FEATURES] [ALL_EXCEPT <list of parameters>] [INCLUDE_ONLY <list of parameters>])``
+The syntax is ``include_parameters( <TEMPLATE_NAME> BUILD_PARAMETERS|LINK_PARAMETERS|BUILD_FEATURES [NONRECURSIVE] [SOURCE BUILD_PARAMETERS|LINK_PARAMETERS|BUILD_FEATURES] [ALL_EXCEPT <list of parameters>] [INCLUDE_ONLY <list of parameters>])``
 
 The function imports the parameters from the specified template and acts as if you would copy-pasted them manually reducing code deduplication and ensuring consistency. 
 
@@ -364,7 +364,7 @@ In the latter case, functions are capable of mass-importing all parameters (with
 
 The example ``04_subproject_pars`` is exactly the same with the exception of adding 
 
-   include_target_parameters_of(LIBHELLO
+   include_build_parameters_of(LIBHELLO
    	INCLUDE_ONLY
    		WHO
    )
@@ -373,7 +373,7 @@ to the ``hello_with_lib/targets.cmake``, so it reads like this:
 
    set(ENUM_TEMPLATES HELLO_WITH_LIB)
    
-   include_target_parameters_of(LIBHELLO
+   include_build_parameters_of(LIBHELLO
    	INCLUDE_ONLY
    		WHO
    ) #Implicitly imports (forwards) only WHO. 
@@ -426,11 +426,11 @@ Contents of the ``lib_gen/targets.cmake``:
 
    set(ENUM_TEMPLATES CODEGEN1_GEN)
 
-   set(TARGET_PARAMETERS 
+   set(BUILD_PARAMETERS 
       SOURCE_OUT	SCALAR	PATH "generated_source"
    )
 
-   set(TEMPLATE_OPTIONS NO_TARGETS)
+   set(FILE_OPTIONS NO_TARGETS)
 
    function(apply_dependency_to_target DEPENDEE_TARGET_NAME OUR_TARGET_NAME)
       get_target_property(DEPENDEE_BINARY_DIR ${DEPENDEE_TARGET_NAME} BINARY_DIR)
@@ -508,7 +508,7 @@ Imagine, that the ``hello_with_lib`` is also responsible for setting a macro var
 
    set(ENUM_TEMPLATES LIBHELLO)
    
-   set(TARGET_PARAMETERS 
+   set(BUILD_PARAMETERS 
       WHO	SCALAR	STRING	"Jupiter"
    )
    
